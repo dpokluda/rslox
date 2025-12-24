@@ -1,23 +1,27 @@
+use std::sync::atomic::{AtomicBool, Ordering};
 use crate::{cprint, cprintln, scanner};
 use anyhow::Result;
 
 
 pub struct Lox {
-    had_error: bool,
 }
+
+static HAD_ERROR: AtomicBool = AtomicBool::new(false);
 
 impl Lox {
     pub fn new() -> Lox {
-        Lox { had_error: false }
+        HAD_ERROR.store(false, Ordering::SeqCst);
+        Lox {}
     }
-    
+
     pub fn run_file(&mut self, file: &str) -> Result<()> {
         let contents = std::fs::read_to_string(file)?;
         self.run(contents.as_str())?;
 
-        if self.had_error {
+        if Lox::had_error() {
             std::process::exit(65);
         }
+        
         Ok(())
     }
 
@@ -41,13 +45,13 @@ impl Lox {
             self.run(line.as_str())?;
         }
 
-        self.had_error = false;
-        
+        HAD_ERROR.store(false, Ordering::SeqCst);
+
         Ok(())
     }
 
     fn run(&mut self, source: &str) -> anyhow::Result<()> {
-        let scanner = scanner::Scanner::new(source.to_string());
+        let mut scanner = scanner::Scanner::new(source.to_string());
         let tokens = scanner.scan_tokens();
         for token in tokens {
             println!("{:?}", token);
@@ -56,16 +60,16 @@ impl Lox {
         Ok(())
     }
 
-    fn error(&mut self, line: u32, message: &str) -> anyhow::Result<()> {
-        self.report(line, "", message);
-
-        Ok(())
+    pub fn error(line: u32, message: &str) {
+        Lox::report(line, "", message);
     }
 
-    fn report(&mut self, line: u32, what: &str, message: &str) -> anyhow::Result<()> {
+    fn report(line: u32, what: &str, message: &str) {
         cprintln!(colored::Color::Red, "[line {}] Error{}: {}", line, what, message);
-        self.had_error = true;
+        HAD_ERROR.store(true, Ordering::SeqCst);
+    }
 
-        Ok(())
+    pub fn had_error() -> bool {
+        HAD_ERROR.load(Ordering::SeqCst)
     }
 }

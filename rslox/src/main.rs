@@ -3,6 +3,8 @@ mod console_macros;
 mod scanner;
 mod token;
 mod lox;
+mod token_type;
+mod literal;
 
 use clap::{CommandFactory, Parser};
 use anyhow::Result;
