@@ -27,6 +27,7 @@ fn main() -> Result<()> {
         Args::command().print_help()?;
     }
 
+    println!();
     cprintln!(colored::Color::Green, "Finished.");
 
     Ok(())

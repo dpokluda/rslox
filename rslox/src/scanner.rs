@@ -32,10 +32,6 @@ impl Scanner {
         self.tokens.clone()
     }
 
-    fn is_at_end(&self) -> bool {
-        self.current >= self.source.len()
-    }
-
     fn scan_token(&mut self) {
         let c = self.advance();
         match c {
@@ -114,6 +110,17 @@ impl Scanner {
         }
     }
 
+    fn is_at_end(&self) -> bool {
+        self.current >= self.source.len()
+    }
+
+    fn peek(&self) -> char {
+        if self.is_at_end() {
+            return '\0';
+        }
+        self.source.chars().nth(self.current).unwrap()
+    }
+
     fn advance(&mut self) -> char {
         let c = self.source.chars().nth(self.current).unwrap();
         self.current += 1;
@@ -131,13 +138,6 @@ impl Scanner {
         true
     }
 
-    fn peek(&self) -> char {
-        if self.is_at_end() {
-            return '\0';
-        }
-        self.source.chars().nth(self.current).unwrap()
-    }
-    
     fn is_digit(&self, c: char) -> bool {
         c >= '0' && c <= '9'
     }
