@@ -1,1 +1,3 @@
-﻿# test
+// This is a simple test file for the rslox interpreter
+print "Hello, World!";
+print 1 + 2 * 3 - 4 / 2;
