@@ -1,4 +1,5 @@
-﻿use crate::lox::Lox;
+﻿use crate::literal::Literal;
+use crate::lox::Lox;
 use crate::token::Token;
 use crate::token_type::TokenType;
 
@@ -160,7 +161,7 @@ impl Scanner {
 
         // Trim the surrounding quotes.
         let value: String = self.source[self.start + 1..self.current - 1].to_string();
-        self.tokens.push(Token::new(TokenType::String, value.clone(), Some(crate::literal::Literal::String(value)), self.line));
+        self.tokens.push(Token::new(TokenType::String, value.clone(), Some(Literal::String(value)), self.line));
     }
     
     fn number(&mut self) {
@@ -180,7 +181,7 @@ impl Scanner {
 
         let value: String = self.source[self.start..self.current].to_string();
         let number_value: f64 = value.parse().unwrap();
-        self.tokens.push(Token::new(TokenType::Number, value.clone(), Some(crate::literal::Literal::Number(number_value)), self.line));
+        self.tokens.push(Token::new(TokenType::Number, value.clone(), Some(Literal::Number(number_value)), self.line));
     }
     
     fn identifier(&mut self) {

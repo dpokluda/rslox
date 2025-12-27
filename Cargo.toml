@@ -1,5 +1,5 @@
 [workspace]
 resolver = "2"
 members = [
-    "rslox", "tools/visitor",
+    "rslox", "tools/generate_ast", "tools/visitor",
 ]
