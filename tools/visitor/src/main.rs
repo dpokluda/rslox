@@ -1,4 +1,4 @@
-use std::ops::Deref;
+use std::rc::Rc;
 
 // Expression Object Model
 pub struct Literal {
@@ -12,12 +12,12 @@ impl Literal {
 }
 
 pub struct Addition {
-    pub left: Box<Expression>,
-    pub right: Box<Expression>,
+    pub left: Rc<Expression>,
+    pub right: Rc<Expression>,
 }
 
 impl Addition {
-    pub fn new(left: Box<Expression>, right: Box<Expression>) -> Self {
+    pub fn new(left: Rc<Expression>, right: Rc<Expression>) -> Self {
         Self {
             left,
             right,
@@ -26,12 +26,12 @@ impl Addition {
 }
 
 pub struct Subtraction {
-    pub left: Box<Expression>,
-    pub right: Box<Expression>,
+    pub left: Rc<Expression>,
+    pub right: Rc<Expression>,
 }
 
 impl Subtraction {
-    pub fn new(left: Box<Expression>, right: Box<Expression>) -> Self {
+    pub fn new(left: Rc<Expression>, right: Rc<Expression>) -> Self {
         Self {
             left,
             right,
@@ -114,38 +114,38 @@ fn main() {
     let evaluator = ExpressionEvaluatingVisitor {};
 
     // Emulate (1 + 2) + 3
-    let expr: Box<Expression> = Box::new(Expression::Addition(Addition::new(
-        Box::new(Expression::Addition(Addition::new(
-            Box::new(Expression::Literal(Literal::new(1.0))),
-            Box::new(Expression::Literal(Literal::new(2.0))),
+    let expr: Rc<Expression> = Rc::new(Expression::Addition(Addition::new(
+        Rc::new(Expression::Addition(Addition::new(
+            Rc::new(Expression::Literal(Literal::new(1.0))),
+            Rc::new(Expression::Literal(Literal::new(2.0))),
         ))),
-        Box::new(Expression::Literal(Literal::new(3.0))),
+        Rc::new(Expression::Literal(Literal::new(3.0))),
     )));
 
-    Expression::accept(expr.deref(), &printer);
-    let result = Expression::accept(expr.deref(), &evaluator);
+    Expression::accept(&expr, &printer);
+    let result = Expression::accept(&expr, &evaluator);
     println!(" = {}", result);
 
     // Emulate 1 - 2 = -1
-    let expr: Box<Expression> = Box::new(Expression::Subtraction(Subtraction::new(
-        Box::new(Expression::Literal(Literal::new(1.0))),
-        Box::new(Expression::Literal(Literal::new(2.0)))
+    let expr: Rc<Expression> = Rc::new(Expression::Subtraction(Subtraction::new(
+        Rc::new(Expression::Literal(Literal::new(1.0))),
+        Rc::new(Expression::Literal(Literal::new(2.0)))
     )));
 
-    Expression::accept(expr.deref(), &printer);
-    let result = Expression::accept(expr.deref(), &evaluator);
+    Expression::accept(&expr, &printer);
+    let result = Expression::accept(&expr, &evaluator);
     println!(" = {}", result);
 
     // Emulate (1 - 2) + 8 = 7
-    let expr: Box<Expression> = Box::new(Expression::Addition(Addition::new(
-        Box::new(Expression::Subtraction(Subtraction::new(
-            Box::new(Expression::Literal(Literal::new(1.0))),
-            Box::new(Expression::Literal(Literal::new(2.0)))
+    let expr: Rc<Expression> = Rc::new(Expression::Addition(Addition::new(
+        Rc::new(Expression::Subtraction(Subtraction::new(
+            Rc::new(Expression::Literal(Literal::new(2.0))),
+            Rc::new(Expression::Literal(Literal::new(4.0)))
         ))),
-        Box::new(Expression::Literal(Literal::new(8.0)))
+        Rc::new(Expression::Literal(Literal::new(8.0)))
     )));
 
-    Expression::accept(expr.deref(), &printer);
-    let result = Expression::accept(expr.deref(), &evaluator);
+    Expression::accept(&expr, &printer);
+    let result = Expression::accept(&expr, &evaluator);
     println!(" = {}", result);
 }
