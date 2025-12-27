@@ -238,30 +238,30 @@ pub enum Stmt {
 
 // Visitor trait
 pub trait Visitor<T> {
-    fn visit_block_expr(&mut self, expr: Rc<Expr>) -> Result<T>;
-    fn visit_class_expr(&mut self, expr: Rc<Expr>) -> Result<T>;
-    fn visit_expression_expr(&mut self, expr: Rc<Expr>) -> Result<T>;
-    fn visit_function_expr(&mut self, expr: Rc<Expr>) -> Result<T>;
-    fn visit_if_expr(&mut self, expr: Rc<Expr>) -> Result<T>;
-    fn visit_print_expr(&mut self, expr: Rc<Expr>) -> Result<T>;
-    fn visit_return_expr(&mut self, expr: Rc<Expr>) -> Result<T>;
-    fn visit_var_expr(&mut self, expr: Rc<Expr>) -> Result<T>;
-    fn visit_while_expr(&mut self, expr: Rc<Expr>) -> Result<T>;
+    fn visit_block_expr(&mut self, block: &Block) -> Result<T>;
+    fn visit_class_expr(&mut self, class: &Class) -> Result<T>;
+    fn visit_expression_expr(&mut self, expression: &Expression) -> Result<T>;
+    fn visit_function_expr(&mut self, function: &Function) -> Result<T>;
+    fn visit_if_expr(&mut self, if_: &If) -> Result<T>;
+    fn visit_print_expr(&mut self, print: &Print) -> Result<T>;
+    fn visit_return_expr(&mut self, return_: &Return) -> Result<T>;
+    fn visit_var_expr(&mut self, var: &Var) -> Result<T>;
+    fn visit_while_expr(&mut self, while_: &While) -> Result<T>;
 }
 
 // Implement accept for Stmt
 impl Stmt {
-    pub fn accept<T>(stmt: Rc<Stmt>, visitor: &mut dyn Visitor<T>) -> Result<T> {
-        match stmt.as_ref() {
-            Stmt::Block(_) => visitor.visit_block_expr(stmt),
-            Stmt::Class(_) => visitor.visit_class_expr(stmt),
-            Stmt::Expression(_) => visitor.visit_expression_expr(stmt),
-            Stmt::Function(_) => visitor.visit_function_expr(stmt),
-            Stmt::If(_) => visitor.visit_if_expr(stmt),
-            Stmt::Print(_) => visitor.visit_print_expr(stmt),
-            Stmt::Return(_) => visitor.visit_return_expr(stmt),
-            Stmt::Var(_) => visitor.visit_var_expr(stmt),
-            Stmt::While(_) => visitor.visit_while_expr(stmt),
+    pub fn accept<T>(&self, visitor: &mut dyn Visitor<T>) -> Result<T> {
+        match self {
+            Stmt::Block(block) => visitor.visit_block_expr(block),
+            Stmt::Class(class) => visitor.visit_class_expr(class),
+            Stmt::Expression(expression) => visitor.visit_expression_expr(expression),
+            Stmt::Function(function) => visitor.visit_function_expr(function),
+            Stmt::If(if_) => visitor.visit_if_expr(if_),
+            Stmt::Print(print) => visitor.visit_print_expr(print),
+            Stmt::Return(return_) => visitor.visit_return_expr(return_),
+            Stmt::Var(var) => visitor.visit_var_expr(var),
+            Stmt::While(while_) => visitor.visit_while_expr(while_),
         }
     }
 }
