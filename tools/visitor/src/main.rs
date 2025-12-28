@@ -114,36 +114,36 @@ fn main() {
     let evaluator = ExpressionEvaluatingVisitor {};
 
     // Emulate (1 + 2) + 3
-    let expr: Rc<Expression> = Rc::new(Expression::Addition(Addition::new(
+    let expr = Expression::Addition(Addition::new(
         Rc::new(Expression::Addition(Addition::new(
             Rc::new(Expression::Literal(Literal::new(1.0))),
             Rc::new(Expression::Literal(Literal::new(2.0))),
         ))),
         Rc::new(Expression::Literal(Literal::new(3.0))),
-    )));
+    ));
 
     Expression::accept(&expr, &printer);
     let result = Expression::accept(&expr, &evaluator);
     println!(" = {}", result);
 
     // Emulate 1 - 2 = -1
-    let expr: Rc<Expression> = Rc::new(Expression::Subtraction(Subtraction::new(
+    let expr = Expression::Subtraction(Subtraction::new(
         Rc::new(Expression::Literal(Literal::new(1.0))),
         Rc::new(Expression::Literal(Literal::new(2.0)))
-    )));
+    ));
 
     Expression::accept(&expr, &printer);
     let result = Expression::accept(&expr, &evaluator);
     println!(" = {}", result);
 
     // Emulate (1 - 2) + 8 = 7
-    let expr: Rc<Expression> = Rc::new(Expression::Addition(Addition::new(
+    let expr = Expression::Addition(Addition::new(
         Rc::new(Expression::Subtraction(Subtraction::new(
             Rc::new(Expression::Literal(Literal::new(2.0))),
             Rc::new(Expression::Literal(Literal::new(4.0)))
         ))),
         Rc::new(Expression::Literal(Literal::new(8.0)))
-    )));
+    ));
 
     Expression::accept(&expr, &printer);
     let result = Expression::accept(&expr, &evaluator);

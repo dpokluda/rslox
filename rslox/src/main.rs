@@ -5,6 +5,9 @@ mod token;
 mod lox;
 mod token_type;
 mod literal;
+mod parser;
+mod expr;
+mod ast_printer;
 
 use clap::{CommandFactory, Parser};
 use anyhow::Result;

@@ -1,20 +1,17 @@
 //[ Appendix II expr
-use std::rc::Rc;
-
-use crate::literal::Literal;
-use crate::lox::Lox;
+use crate::literal::LiteralValue;
 use crate::token::Token;
-use crate::token_type::TokenType;
+use anyhow::Result;
 
 // Assign
 #[derive(Debug, Clone, Eq, Hash, PartialEq)]
 pub struct Assign {
     name: Token,
-    value: Rc<Expr>,
+    value: Box<Expr>,
 }
 
 impl Assign {
-    pub fn new(name: Token, value: Rc<Expr>) -> Self {
+    pub fn new(name: Token, value: Box<Expr>) -> Self {
         Assign {
             name,
             value,
@@ -25,7 +22,7 @@ impl Assign {
         &self.name
     }
 
-    pub fn value(&self) -> &Rc<Expr> {
+    pub fn value(&self) -> &Box<Expr> {
         &self.value
     }
 }
@@ -33,13 +30,13 @@ impl Assign {
 // Binary
 #[derive(Debug, Clone, Eq, Hash, PartialEq)]
 pub struct Binary {
-    left: Rc<Expr>,
+    left: Box<Expr>,
     operator: Token,
-    right: Rc<Expr>,
+    right: Box<Expr>,
 }
 
 impl Binary {
-    pub fn new(left: Rc<Expr>, operator: Token, right: Rc<Expr>) -> Self {
+    pub fn new(left: Box<Expr>, operator: Token, right: Box<Expr>) -> Self {
         Binary {
             left,
             operator,
@@ -47,7 +44,7 @@ impl Binary {
         }
     }
 
-    pub fn left(&self) -> &Rc<Expr> {
+    pub fn left(&self) -> &Box<Expr> {
         &self.left
     }
 
@@ -55,7 +52,7 @@ impl Binary {
         &self.operator
     }
 
-    pub fn right(&self) -> &Rc<Expr> {
+    pub fn right(&self) -> &Box<Expr> {
         &self.right
     }
 }
@@ -63,13 +60,13 @@ impl Binary {
 // Call
 #[derive(Debug, Clone, Eq, Hash, PartialEq)]
 pub struct Call {
-    callee: Rc<Expr>,
+    callee: Box<Expr>,
     paren: Token,
-    arguments: Vec<Rc<Expr>>,
+    arguments: Vec<Box<Expr>>,
 }
 
 impl Call {
-    pub fn new(callee: Rc<Expr>, paren: Token, arguments: Vec<Rc<Expr>>) -> Self {
+    pub fn new(callee: Box<Expr>, paren: Token, arguments: Vec<Box<Expr>>) -> Self {
         Call {
             callee,
             paren,
@@ -77,7 +74,7 @@ impl Call {
         }
     }
 
-    pub fn callee(&self) -> &Rc<Expr> {
+    pub fn callee(&self) -> &Box<Expr> {
         &self.callee
     }
 
@@ -85,7 +82,7 @@ impl Call {
         &self.paren
     }
 
-    pub fn arguments(&self) -> &Vec<Rc<Expr>> {
+    pub fn arguments(&self) -> &Vec<Box<Expr>> {
         &self.arguments
     }
 }
@@ -93,19 +90,19 @@ impl Call {
 // Get
 #[derive(Debug, Clone, Eq, Hash, PartialEq)]
 pub struct Get {
-    object: Rc<Expr>,
+    object: Box<Expr>,
     name: Token,
 }
 
 impl Get {
-    pub fn new(object: Rc<Expr>, name: Token) -> Self {
+    pub fn new(object: Box<Expr>, name: Token) -> Self {
         Get {
             object,
             name,
         }
     }
 
-    pub fn object(&self) -> &Rc<Expr> {
+    pub fn object(&self) -> &Box<Expr> {
         &self.object
     }
 
@@ -117,17 +114,17 @@ impl Get {
 // Grouping
 #[derive(Debug, Clone, Eq, Hash, PartialEq)]
 pub struct Grouping {
-    expression: Rc<Expr>,
+    expression: Box<Expr>,
 }
 
 impl Grouping {
-    pub fn new(expression: Rc<Expr>) -> Self {
+    pub fn new(expression: Box<Expr>) -> Self {
         Grouping {
             expression,
         }
     }
 
-    pub fn expression(&self) -> &Rc<Expr> {
+    pub fn expression(&self) -> &Box<Expr> {
         &self.expression
     }
 }
@@ -153,13 +150,13 @@ impl Literal {
 // Logical
 #[derive(Debug, Clone, Eq, Hash, PartialEq)]
 pub struct Logical {
-    left: Rc<Expr>,
+    left: Box<Expr>,
     operator: Token,
-    right: Rc<Expr>,
+    right: Box<Expr>,
 }
 
 impl Logical {
-    pub fn new(left: Rc<Expr>, operator: Token, right: Rc<Expr>) -> Self {
+    pub fn new(left: Box<Expr>, operator: Token, right: Box<Expr>) -> Self {
         Logical {
             left,
             operator,
@@ -167,7 +164,7 @@ impl Logical {
         }
     }
 
-    pub fn left(&self) -> &Rc<Expr> {
+    pub fn left(&self) -> &Box<Expr> {
         &self.left
     }
 
@@ -175,7 +172,7 @@ impl Logical {
         &self.operator
     }
 
-    pub fn right(&self) -> &Rc<Expr> {
+    pub fn right(&self) -> &Box<Expr> {
         &self.right
     }
 }
@@ -183,13 +180,13 @@ impl Logical {
 // Set
 #[derive(Debug, Clone, Eq, Hash, PartialEq)]
 pub struct Set {
-    object: Rc<Expr>,
+    object: Box<Expr>,
     name: Token,
-    value: Rc<Expr>,
+    value: Box<Expr>,
 }
 
 impl Set {
-    pub fn new(object: Rc<Expr>, name: Token, value: Rc<Expr>) -> Self {
+    pub fn new(object: Box<Expr>, name: Token, value: Box<Expr>) -> Self {
         Set {
             object,
             name,
@@ -197,7 +194,7 @@ impl Set {
         }
     }
 
-    pub fn object(&self) -> &Rc<Expr> {
+    pub fn object(&self) -> &Box<Expr> {
         &self.object
     }
 
@@ -205,7 +202,7 @@ impl Set {
         &self.name
     }
 
-    pub fn value(&self) -> &Rc<Expr> {
+    pub fn value(&self) -> &Box<Expr> {
         &self.value
     }
 }
@@ -256,11 +253,11 @@ impl This {
 #[derive(Debug, Clone, Eq, Hash, PartialEq)]
 pub struct Unary {
     operator: Token,
-    right: Rc<Expr>,
+    right: Box<Expr>,
 }
 
 impl Unary {
-    pub fn new(operator: Token, right: Rc<Expr>) -> Self {
+    pub fn new(operator: Token, right: Box<Expr>) -> Self {
         Unary {
             operator,
             right,
@@ -271,7 +268,7 @@ impl Unary {
         &self.operator
     }
 
-    pub fn right(&self) -> &Rc<Expr> {
+    pub fn right(&self) -> &Box<Expr> {
         &self.right
     }
 }

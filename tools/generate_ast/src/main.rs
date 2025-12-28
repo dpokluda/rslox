@@ -6,11 +6,13 @@ use anyhow::Result;
 use crate::args::Args;
 
 mod args;
+mod console_macros;
 
 struct GenerateAst {}
 
 impl GenerateAst {
     fn define_ast(imports: Vec<&str>, base_name: &str, output_dir: &str, types: Vec<&str>) -> Result<()> {
+        cprintln!(colored::Color::BrightYellow, "Generating AST for {}...", base_name);
         let file_path = format!("{}/{}.rs", output_dir, base_name.to_lowercase());
         let mut file = File::create(&file_path)?;
 
@@ -31,7 +33,7 @@ impl GenerateAst {
         Self::define_visitor(&mut file, base_name, &types)?;
 
         file.write_all(format!("\n//] Appendix II {}\n", base_name.to_lowercase()).as_bytes())?;
-        println!("Generated {} in file {}", base_name, file_path);
+        println!("  Generated {} in file {}", base_name, file_path);
         Ok(())
     }
 
@@ -168,49 +170,48 @@ fn main() -> Result<()> {
     }
 
     let _ = GenerateAst::define_ast(
-        vec!["use std::rc::Rc;\n\n",
-             "use crate::literal::Literal;\n",
-             "use crate::lox::Lox;\n",
+        vec!["use crate::literal::LiteralValue;\n",
              "use crate::token::Token;\n",
-             "use crate::token_type::TokenType;\n"],
+             "use anyhow::Result;\n"],
         "Expr",
         &args.output,
         vec![
-            "Assign   : Token name, Rc<Expr> value",
-            "Binary   : Rc<Expr> left, Token operator, Rc<Expr> right",
-            "Call     : Rc<Expr> callee, Token paren, Vec<Rc<Expr>> arguments",
-            "Get      : Rc<Expr> object, Token name",
-            "Grouping : Rc<Expr> expression",
+            "Assign   : Token name, Box<Expr> value",
+            "Binary   : Box<Expr> left, Token operator, Box<Expr> right",
+            "Call     : Box<Expr> callee, Token paren, Vec<Box<Expr>> arguments",
+            "Get      : Box<Expr> object, Token name",
+            "Grouping : Box<Expr> expression",
             "Literal  : LiteralValue value",
-            "Logical  : Rc<Expr> left, Token operator, Rc<Expr> right",
-            "Set      : Rc<Expr> object, Token name, Rc<Expr> value",
+            "Logical  : Box<Expr> left, Token operator, Box<Expr> right",
+            "Set      : Box<Expr> object, Token name, Box<Expr> value",
             "Super    : Token keyword, Token method",
             "This     : Token keyword",
-            "Unary    : Token operator, Rc<Expr> right",
+            "Unary    : Token operator, Box<Expr> right",
             "Variable : Token name"
         ]);
 
-    let _ = GenerateAst::define_ast(
-        vec!["use std::rc::Rc;\n\n",
-             "use crate::literal::Literal;\n",
-             "use crate::lox::Lox;\n",
+/*    
+        let _ = GenerateAst::define_ast(
+        vec!["use crate::literal::LiteralValue;\n",
              "use crate::token::Token;\n",
-             "use crate::token_type::TokenType;\n"],
+             "use anyhow::Result;\n"],
         "Stmt",
         &args.output,
         vec![
-            "Block      : Vec<Rc<Stmt>> statements",
-            "Class      : Token name, Option<Rc<Expr>> superclass, \
-                                  Vec<Rc<Function>> methods",
-            "Expression : Rc<Expr> expression",
+            "Block      : Vec<Box<Stmt>> statements",
+            "Class      : Token name, Option<Box<Expr>> superclass, \
+                                  Vec<Box<Function>> methods",
+            "Expression : Box<Expr> expression",
             "Function   : Token name, Vec<Token> params, \
-                                  Vec<Rc<Stmt>> body",
-            "If         : Rc<Expr> condition, Rc<Stmt> then_branch, \
-                                  Option<Rc<Stmt>> else_branch",
-            "Print      : Rc<Expr> expression",
-            "Return     : Token keyword, Option<Rc<Expr>> value",
-            "Var        : Token name, Option<Rc<Expr>> initializer",
-            "While      : Rc<Expr> condition, Rc<Stmt> body"
+                                  Vec<Box<Stmt>> body",
+            "If         : Box<Expr> condition, Box<Stmt> then_branch, \
+                                  Option<Box<Stmt>> else_branch",
+            "Print      : Box<Expr> expression",
+            "Return     : Token keyword, Option<Box<Expr>> value",
+            "Var        : Token name, Option<Box<Expr>> initializer",
+            "While      : Box<Expr> condition, Box<Stmt> body"
         ]);
+*/    
+    cprintln!(colored::Color::Green, "Finished.");
     Ok(())
 }

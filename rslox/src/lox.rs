@@ -1,7 +1,7 @@
 use std::sync::atomic::{AtomicBool, Ordering};
 use crate::{cprint, cprintln, scanner};
 use anyhow::Result;
-
+use crate::ast_printer::AstPrinter;
 
 pub struct Lox {
 }
@@ -53,15 +53,30 @@ impl Lox {
     fn run(&mut self, source: &str) -> anyhow::Result<()> {
         let mut scanner = scanner::Scanner::new(source.to_string());
         let tokens = scanner.scan_tokens();
-        for token in tokens {
-            println!("{:?}", token);
+
+        let mut parser = crate::parser::Parser::new(tokens);
+        let expr = parser.parse();
+
+        if Lox::had_error() {
+            return Ok(());
         }
+
+        let mut printer = AstPrinter {};
+        println!("{}", printer.print(&expr.unwrap()));
 
         Ok(())
     }
 
-    pub fn error(line: u32, message: &str) {
+    pub fn error_line(line: u32, message: &str) {
         Lox::report(line, "", message);
+    }
+
+    pub fn error_token(token: &crate::token::Token, message: &str) {
+        if token.token_type == crate::token_type::TokenType::EOF {
+            Lox::report(token.line, " at end", message);
+        } else {
+            Lox::report(token.line, &format!(" at '{}'", token.lexeme), message);
+        }
     }
 
     fn report(line: u32, what: &str, message: &str) {
