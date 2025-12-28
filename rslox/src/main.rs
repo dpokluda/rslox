@@ -8,6 +8,10 @@ mod literal;
 mod parser;
 mod expr;
 mod ast_printer;
+mod interpreter;
+mod value;
+mod parse_error;
+mod runtime_error;
 
 use clap::{CommandFactory, Parser};
 use anyhow::Result;

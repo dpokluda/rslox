@@ -2,16 +2,22 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use crate::{cprint, cprintln, scanner};
 use anyhow::Result;
 use crate::ast_printer::AstPrinter;
+use crate::interpreter::Interpreter;
 
 pub struct Lox {
+    interpreter: Interpreter,
 }
 
 static HAD_ERROR: AtomicBool = AtomicBool::new(false);
+static HAD_RUNTIME_ERROR: AtomicBool = AtomicBool::new(false);
 
 impl Lox {
     pub fn new() -> Lox {
         HAD_ERROR.store(false, Ordering::SeqCst);
-        Lox {}
+        HAD_RUNTIME_ERROR.store(false, Ordering::SeqCst);
+        Lox {
+            interpreter: Interpreter::new(),
+        }
     }
 
     pub fn run_file(&mut self, file: &str) -> Result<()> {
@@ -20,6 +26,9 @@ impl Lox {
 
         if Lox::had_error() {
             std::process::exit(65);
+        }
+        if Lox::had_runtime_error() {
+            std::process::exit(70);
         }
         
         Ok(())
@@ -62,7 +71,9 @@ impl Lox {
         }
 
         let mut printer = AstPrinter {};
-        println!("{}", printer.print(&expr.unwrap()));
+        println!("{}", printer.print(&expr.clone().unwrap()));
+        
+        self.interpreter.interpret(&expr.unwrap());
 
         Ok(())
     }
@@ -72,11 +83,17 @@ impl Lox {
     }
 
     pub fn error_token(token: &crate::token::Token, message: &str) {
-        if token.token_type == crate::token_type::TokenType::EOF {
-            Lox::report(token.line, " at end", message);
+        if token.token_type() == &crate::token_type::TokenType::Eof {
+            Lox::report(token.line(), " at end", message);
         } else {
-            Lox::report(token.line, &format!(" at '{}'", token.lexeme), message);
+            Lox::report(token.line(), &format!(" at '{}'", token.lexeme()), message);
         }
+
+    }
+
+    pub fn runtime_error(token: &crate::token::Token, message: &str) {
+        cprintln!(colored::Color::Red, "{}\n[line {}]", message, token.line());
+        HAD_RUNTIME_ERROR.store(true, Ordering::SeqCst);
     }
 
     fn report(line: u32, what: &str, message: &str) {
@@ -86,5 +103,9 @@ impl Lox {
 
     pub fn had_error() -> bool {
         HAD_ERROR.load(Ordering::SeqCst)
+    }
+    
+    pub fn had_runtime_error() -> bool {
+        HAD_RUNTIME_ERROR.load(Ordering::SeqCst)
     }
 }

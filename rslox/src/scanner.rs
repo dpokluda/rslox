@@ -29,7 +29,7 @@ impl Scanner {
             self.scan_token();
         }
 
-        self.tokens.push(Token::new(TokenType::EOF, "".to_string(), None, self.line));
+        self.tokens.push(Token::new(TokenType::Eof, "".to_string(), None, self.line));
         self.tokens.clone()
     }
 

@@ -111,7 +111,7 @@ impl GenerateAst {
             let type_name = type_descr[0].trim();
             let safe_type_name = Self::safe_ident(&type_name.to_lowercase());
             file.write_all(format!(
-                "    fn visit_{}_expr(&mut self, {}: &{}) -> Result<T>;\n",
+                "    fn visit_{}_expr(&mut self, {}: &{}) -> Result<T, RuntimeError>;\n",
                 type_name.to_lowercase(), safe_type_name, type_name
             ).as_bytes())?;
         }
@@ -120,7 +120,7 @@ impl GenerateAst {
         // Implement `accept()`
         file.write_all(format!("\n// Implement accept for {}", base_name).as_bytes())?;
         file.write_all(format!("\nimpl {} {{\n", base_name).as_bytes())?;
-        file.write_all("    pub fn accept<T>(&self, visitor: &mut dyn Visitor<T>) -> Result<T> {\n".as_bytes())?;
+        file.write_all("    pub fn accept<T>(&self, visitor: &mut dyn Visitor<T>) -> Result<T, RuntimeError> {\n".as_bytes())?;
         file.write_all("        match self {\n".as_bytes())?;
         for t in types {
             let type_descr: Vec<&str> = t.split(':').collect();
@@ -171,6 +171,7 @@ fn main() -> Result<()> {
 
     let _ = GenerateAst::define_ast(
         vec!["use crate::literal::LiteralValue;\n",
+             "use crate::runtime_error::RuntimeError;\n",
              "use crate::token::Token;\n",
              "use anyhow::Result;\n"],
         "Expr",
@@ -193,6 +194,7 @@ fn main() -> Result<()> {
 /*    
         let _ = GenerateAst::define_ast(
         vec!["use crate::literal::LiteralValue;\n",
+             "use crate::runtime_error::RuntimeError;\n",
              "use crate::token::Token;\n",
              "use anyhow::Result;\n"],
         "Stmt",

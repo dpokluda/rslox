@@ -2,10 +2,8 @@ use crate::token::Token;
 use crate::expr::{Binary, Expr, Grouping, Literal, Unary};
 use crate::literal::LiteralValue;
 use crate::lox;
+use crate::parse_error::ParseError;
 use crate::token_type::TokenType;
-
-#[derive(Debug, Clone)]
-pub struct ParseError {}
 
 pub struct Parser {
     tokens: Vec<Token>,
@@ -25,6 +23,10 @@ impl Parser {
     }
 
     fn expression(&mut self) -> Result<Expr, ParseError> {
+        self.equality()
+    }
+
+    fn equality(&mut self) -> Result<Expr, ParseError> {
         let mut expr = self.comparison()?;
         while self.match_token(&[TokenType::Plus, TokenType::Minus]) {
             let operator = self.previous().clone();
@@ -89,14 +91,14 @@ impl Parser {
             return Ok(Expr::Literal(Literal::new(LiteralValue::Nil)));
         }
         if self.match_token(&[TokenType::Number]) {
-            let value = match self.previous().literal.clone().unwrap() {
+            let value = match self.previous().literal().clone().unwrap() {
                 LiteralValue::Number(n) => n,
                 _ => panic!("Expected number literal."),
             };
             return Ok(Expr::Literal(Literal::new(LiteralValue::Number(value))));
         }
         if self.match_token(&[TokenType::String]) {
-            let value = match self.previous().literal.clone().unwrap() {
+            let value = match self.previous().literal().clone().unwrap() {
                 LiteralValue::String(s) => s,
                 _ => panic!("Expected string literal."),
             };
@@ -138,7 +140,7 @@ impl Parser {
         if self.is_at_end() {
             return false;
         }
-        &self.peek().token_type == token_type
+        &self.peek().token_type() == &token_type
     }
 
     fn advance(&mut self) -> &Token {
@@ -149,7 +151,7 @@ impl Parser {
     }
 
     fn is_at_end(&self) -> bool {
-        self.peek().token_type == TokenType::EOF
+        self.peek().token_type() == &TokenType::Eof
     }
 
     fn peek(&self) -> &Token {
@@ -158,5 +160,25 @@ impl Parser {
 
     fn previous(&self) -> &Token {
         &self.tokens[self.current - 1]
+    }
+
+    fn synchronize(&mut self) {
+        self.advance();
+
+        while !self.is_at_end() {
+            if self.previous().token_type() == &TokenType::Semicolon {
+                return;
+            }
+
+            match self.peek().token_type() {
+                TokenType::Class | TokenType::Fun | TokenType::Var | TokenType::For |
+                TokenType::If | TokenType::While | TokenType::Print | TokenType::Return => {
+                    return;
+                }
+                _ => {}
+            }
+
+            self.advance();
+        }
     }
 }

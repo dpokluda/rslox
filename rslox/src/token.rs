@@ -1,13 +1,13 @@
 ﻿use std::hash::Hash;
 use crate::literal::LiteralValue;
-use crate::token_type::TokenType;
+pub(crate) use crate::token_type::TokenType;
 
 #[derive(Debug, Clone, Eq, Hash, PartialEq)]
 pub struct Token {
-    pub token_type: TokenType,
-    pub lexeme: String,
-    pub literal: Option<LiteralValue>,
-    pub line: u32,
+    token_type: TokenType,
+    lexeme: String,
+    literal: Option<LiteralValue>,
+    line: u32,
 } 
 
 impl Token {
@@ -18,6 +18,22 @@ impl Token {
             literal,
             line,
         }
+    }
+    
+    pub fn token_type(&self) -> &TokenType {
+        &self.token_type
+    }
+    
+    pub fn lexeme(&self) -> &String {
+        &self.lexeme
+    }
+    
+    pub fn literal(&self) -> &Option<LiteralValue> {
+        &self.literal
+    }
+    
+    pub fn line(&self) -> u32 {
+        self.line
     }
 }
 

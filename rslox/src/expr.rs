@@ -1,5 +1,6 @@
 //[ Appendix II expr
 use crate::literal::LiteralValue;
+use crate::runtime_error::RuntimeError;
 use crate::token::Token;
 use anyhow::Result;
 
@@ -310,23 +311,23 @@ pub enum Expr {
 
 // Visitor trait
 pub trait Visitor<T> {
-    fn visit_assign_expr(&mut self, assign: &Assign) -> Result<T>;
-    fn visit_binary_expr(&mut self, binary: &Binary) -> Result<T>;
-    fn visit_call_expr(&mut self, call: &Call) -> Result<T>;
-    fn visit_get_expr(&mut self, get: &Get) -> Result<T>;
-    fn visit_grouping_expr(&mut self, grouping: &Grouping) -> Result<T>;
-    fn visit_literal_expr(&mut self, literal: &Literal) -> Result<T>;
-    fn visit_logical_expr(&mut self, logical: &Logical) -> Result<T>;
-    fn visit_set_expr(&mut self, set: &Set) -> Result<T>;
-    fn visit_super_expr(&mut self, super_: &Super) -> Result<T>;
-    fn visit_this_expr(&mut self, this: &This) -> Result<T>;
-    fn visit_unary_expr(&mut self, unary: &Unary) -> Result<T>;
-    fn visit_variable_expr(&mut self, variable: &Variable) -> Result<T>;
+    fn visit_assign_expr(&mut self, assign: &Assign) -> Result<T, RuntimeError>;
+    fn visit_binary_expr(&mut self, binary: &Binary) -> Result<T, RuntimeError>;
+    fn visit_call_expr(&mut self, call: &Call) -> Result<T, RuntimeError>;
+    fn visit_get_expr(&mut self, get: &Get) -> Result<T, RuntimeError>;
+    fn visit_grouping_expr(&mut self, grouping: &Grouping) -> Result<T, RuntimeError>;
+    fn visit_literal_expr(&mut self, literal: &Literal) -> Result<T, RuntimeError>;
+    fn visit_logical_expr(&mut self, logical: &Logical) -> Result<T, RuntimeError>;
+    fn visit_set_expr(&mut self, set: &Set) -> Result<T, RuntimeError>;
+    fn visit_super_expr(&mut self, super_: &Super) -> Result<T, RuntimeError>;
+    fn visit_this_expr(&mut self, this: &This) -> Result<T, RuntimeError>;
+    fn visit_unary_expr(&mut self, unary: &Unary) -> Result<T, RuntimeError>;
+    fn visit_variable_expr(&mut self, variable: &Variable) -> Result<T, RuntimeError>;
 }
 
 // Implement accept for Expr
 impl Expr {
-    pub fn accept<T>(&self, visitor: &mut dyn Visitor<T>) -> Result<T> {
+    pub fn accept<T>(&self, visitor: &mut dyn Visitor<T>) -> Result<T, RuntimeError> {
         match self {
             Expr::Assign(assign) => visitor.visit_assign_expr(assign),
             Expr::Binary(binary) => visitor.visit_binary_expr(binary),
