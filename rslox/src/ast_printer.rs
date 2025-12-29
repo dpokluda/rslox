@@ -1,5 +1,6 @@
-use crate::expr::{Assign, Binary, Call, Expr, Get, Grouping, Literal, Logical, Set, Super, This, Unary, Variable, Visitor};
+use crate::expr::*;
 use anyhow::Result;
+use crate::expr;
 use crate::runtime_error::RuntimeError;
 
 pub struct AstPrinter;
@@ -23,22 +24,10 @@ impl AstPrinter {
     }
 }
 
-impl Visitor<String> for AstPrinter {
-    fn visit_assign_expr(&mut self, assign: &Assign) -> Result<String, RuntimeError> {
-        todo!()     
-    }
-
+impl expr::Visitor<String> for AstPrinter {
     fn visit_binary_expr(&mut self, binary: &Binary) -> Result<String, RuntimeError> {
         self.parenthesize(&binary.operator().lexeme(), &[binary.left(), binary.right()])
         
-    }
-
-    fn visit_call_expr(&mut self, call: &Call) -> Result<String, RuntimeError> {
-        todo!()
-    }
-
-    fn visit_get_expr(&mut self, get: &Get) -> Result<String, RuntimeError> {
-        todo!()
     }
 
     fn visit_grouping_expr(&mut self, grouping: &Grouping) -> Result<String, RuntimeError> {
@@ -53,28 +42,8 @@ impl Visitor<String> for AstPrinter {
             crate::literal::LiteralValue::Nil => Ok("nil".to_string()),
         }
     }
-
-    fn visit_logical_expr(&mut self, logical: &Logical) -> Result<String, RuntimeError> {
-        todo!()
-    }
-
-    fn visit_set_expr(&mut self, set: &Set) -> Result<String, RuntimeError> {
-        todo!()
-    }
-
-    fn visit_super_expr(&mut self, super_: &Super) -> Result<String, RuntimeError> {
-        todo!()
-    }
-
-    fn visit_this_expr(&mut self, this: &This) -> Result<String, RuntimeError> {
-        todo!()
-    }
-
+    
     fn visit_unary_expr(&mut self, unary: &Unary) -> Result<String, RuntimeError> {
         self.parenthesize(&unary.operator().lexeme(), &[unary.right()])
-    }
-
-    fn visit_variable_expr(&mut self, variable: &Variable) -> Result<String, RuntimeError> {
-        todo!()
     }
 }

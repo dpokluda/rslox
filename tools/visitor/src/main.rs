@@ -1,5 +1,3 @@
-use std::rc::Rc;
-
 // Expression Object Model
 pub struct Literal {
     value: f32,
@@ -12,12 +10,12 @@ impl Literal {
 }
 
 pub struct Addition {
-    pub left: Rc<Expression>,
-    pub right: Rc<Expression>,
+    pub left: Box<Expression>,
+    pub right: Box<Expression>,
 }
 
 impl Addition {
-    pub fn new(left: Rc<Expression>, right: Rc<Expression>) -> Self {
+    pub fn new(left: Box<Expression>, right: Box<Expression>) -> Self {
         Self {
             left,
             right,
@@ -26,12 +24,12 @@ impl Addition {
 }
 
 pub struct Subtraction {
-    pub left: Rc<Expression>,
-    pub right: Rc<Expression>,
+    pub left: Box<Expression>,
+    pub right: Box<Expression>,
 }
 
 impl Subtraction {
-    pub fn new(left: Rc<Expression>, right: Rc<Expression>) -> Self {
+    pub fn new(left: Box<Expression>, right: Box<Expression>) -> Self {
         Self {
             left,
             right,
@@ -115,11 +113,11 @@ fn main() {
 
     // Emulate (1 + 2) + 3
     let expr = Expression::Addition(Addition::new(
-        Rc::new(Expression::Addition(Addition::new(
-            Rc::new(Expression::Literal(Literal::new(1.0))),
-            Rc::new(Expression::Literal(Literal::new(2.0))),
+        Box::new(Expression::Addition(Addition::new(
+            Box::new(Expression::Literal(Literal::new(1.0))),
+            Box::new(Expression::Literal(Literal::new(2.0))),
         ))),
-        Rc::new(Expression::Literal(Literal::new(3.0))),
+        Box::new(Expression::Literal(Literal::new(3.0))),
     ));
 
     Expression::accept(&expr, &printer);
@@ -128,8 +126,8 @@ fn main() {
 
     // Emulate 1 - 2 = -1
     let expr = Expression::Subtraction(Subtraction::new(
-        Rc::new(Expression::Literal(Literal::new(1.0))),
-        Rc::new(Expression::Literal(Literal::new(2.0)))
+        Box::new(Expression::Literal(Literal::new(1.0))),
+        Box::new(Expression::Literal(Literal::new(2.0)))
     ));
 
     Expression::accept(&expr, &printer);
@@ -138,11 +136,11 @@ fn main() {
 
     // Emulate (1 - 2) + 8 = 7
     let expr = Expression::Addition(Addition::new(
-        Rc::new(Expression::Subtraction(Subtraction::new(
-            Rc::new(Expression::Literal(Literal::new(2.0))),
-            Rc::new(Expression::Literal(Literal::new(4.0)))
+        Box::new(Expression::Subtraction(Subtraction::new(
+            Box::new(Expression::Literal(Literal::new(2.0))),
+            Box::new(Expression::Literal(Literal::new(4.0)))
         ))),
-        Rc::new(Expression::Literal(Literal::new(8.0)))
+        Box::new(Expression::Literal(Literal::new(8.0)))
     ));
 
     Expression::accept(&expr, &printer);

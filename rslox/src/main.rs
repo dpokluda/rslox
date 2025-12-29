@@ -7,6 +7,7 @@ mod token_type;
 mod literal;
 mod parser;
 mod expr;
+mod stmt;
 mod ast_printer;
 mod interpreter;
 mod value;

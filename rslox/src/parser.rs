@@ -1,9 +1,10 @@
 use crate::token::Token;
-use crate::expr::{Binary, Expr, Grouping, Literal, Unary};
+use crate::token_type::TokenType;
 use crate::literal::LiteralValue;
+use crate::expr::*;
+use crate::stmt::*;
 use crate::lox;
 use crate::parse_error::ParseError;
-use crate::token_type::TokenType;
 
 pub struct Parser {
     tokens: Vec<Token>,
@@ -15,15 +16,40 @@ impl Parser {
         Parser { tokens, current: 0 }
     }
 
-    pub fn parse(&mut self) -> Result<Expr, ParseError> {
-        match self.expression() {
-            Ok(expr) => Ok(expr),
-            Err(_) => Err(ParseError {}),
+    pub fn parse(&mut self) -> Result<Vec<Stmt>, ParseError> {
+        let mut statements = vec![];
+
+        while !self.is_at_end() {
+            // For now, we only parse expressions.
+            let stmt = self.statement()?;
+            statements.push(stmt);
         }
+
+        Ok(statements)
     }
 
     fn expression(&mut self) -> Result<Expr, ParseError> {
         self.equality()
+    }
+
+    fn statement(&mut self) -> Result<Stmt, ParseError> {
+        if self.match_token(&[TokenType::Print]) {
+            self.print_statement()
+        } else {
+            self.expression_statement()
+        }
+    }
+
+    fn print_statement(&mut self) -> Result<Stmt, ParseError> {
+        let value = self.expression()?;
+        self.consume(TokenType::Semicolon, "Expect ';' after value.")?;
+        Ok(Stmt::Print(Print::new(Box::new(value))))
+    }
+
+    fn expression_statement(&mut self) -> Result<Stmt, ParseError> {
+        let expr = self.expression()?;
+        self.consume(TokenType::Semicolon, "Expect ';' after expression.")?;
+        Ok(Stmt::Expression(Expression::new(Box::new(expr))))
     }
 
     fn equality(&mut self) -> Result<Expr, ParseError> {
@@ -122,8 +148,9 @@ impl Parser {
     }
 
     fn error(&self, token: &Token, message: &str) -> ParseError {
-        lox::Lox::error_token(token, message);
-        ParseError {}
+        let parse_error = ParseError::new(token.clone(), message.to_string());
+        lox::Lox::parse_error(&parse_error);
+        parse_error
     }
 
     fn match_token(&mut self, types: &[TokenType]) -> bool {
@@ -181,4 +208,5 @@ impl Parser {
             self.advance();
         }
     }
+
 }

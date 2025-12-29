@@ -1,6 +1,7 @@
-use crate::expr::{Assign, Binary, Call, Expr, Get, Grouping, Literal, Logical, Set, Super, This, Unary, Variable, Visitor};
-use crate::lox;
+use crate::expr::{Expr, Binary, Grouping, Literal, Unary};
+use crate::{expr, lox, stmt};
 use crate::runtime_error::RuntimeError;
+use crate::stmt::{Expression, Print, Stmt};
 use crate::value::Value;
 
 pub struct Interpreter { }
@@ -10,15 +11,21 @@ impl Interpreter {
         Interpreter { }
     }
 
-    pub fn interpret(&mut self, expr: &Expr) {
-        match self.evaluate(expr) {
-            Ok(value) => println!("{}", value),
-            Err(error) => lox::Lox::runtime_error(error.token(), error.message()),
+    pub fn interpret(&mut self, statements: &Vec<Stmt>) {
+        for statement in statements {
+            match self.execute(&statement) {
+                Ok(_) => {},
+                Err(e) => lox::Lox::runtime_error(&e),
+            }
         }
     }
 
     fn evaluate(&mut self, expr: &Expr) -> Result<Value, RuntimeError> {
         expr.accept(self)
+    }
+    
+    fn execute(&mut self, stmt: &stmt::Stmt) -> Result<(), RuntimeError> {
+        stmt.accept(self)
     }
 
     fn is_truthy(&self, value: &Value) -> bool {
@@ -51,11 +58,7 @@ impl Interpreter {
     }
 }
 
-impl Visitor<Value> for Interpreter {
-    fn visit_assign_expr(&mut self, assign: &Assign) -> anyhow::Result<Value, RuntimeError> {
-        todo!()
-    }
-
+impl expr::Visitor<Value> for Interpreter {
     fn visit_binary_expr(&mut self, binary: &Binary) -> anyhow::Result<Value, RuntimeError> {
         let left = self.evaluate(binary.left())?;
         let right = self.evaluate(binary.right())?;
@@ -118,14 +121,6 @@ impl Visitor<Value> for Interpreter {
         }
     }
 
-    fn visit_call_expr(&mut self, call: &Call) -> anyhow::Result<Value, RuntimeError> {
-        todo!()
-    }
-
-    fn visit_get_expr(&mut self, get: &Get) -> anyhow::Result<Value, RuntimeError> {
-        todo!()
-    }
-
     fn visit_grouping_expr(&mut self, grouping: &Grouping) -> anyhow::Result<Value, RuntimeError> {
         self.evaluate(grouping.expression())
     }
@@ -137,22 +132,6 @@ impl Visitor<Value> for Interpreter {
             crate::literal::LiteralValue::String(s) => Ok(Value::String(s.clone())),
             crate::literal::LiteralValue::Nil => Ok(Value::Nil),
         }
-    }
-
-    fn visit_logical_expr(&mut self, logical: &Logical) -> anyhow::Result<Value, RuntimeError> {
-        todo!()
-    }
-
-    fn visit_set_expr(&mut self, set: &Set) -> anyhow::Result<Value, RuntimeError> {
-        todo!()
-    }
-
-    fn visit_super_expr(&mut self, super_: &Super) -> anyhow::Result<Value, RuntimeError> {
-        todo!()
-    }
-
-    fn visit_this_expr(&mut self, this: &This) -> anyhow::Result<Value, RuntimeError> {
-        todo!()
     }
 
     fn visit_unary_expr(&mut self, unary: &Unary) -> anyhow::Result<Value, RuntimeError> {
@@ -171,8 +150,17 @@ impl Visitor<Value> for Interpreter {
             )),
         }
     }
+}
 
-    fn visit_variable_expr(&mut self, variable: &Variable) -> anyhow::Result<Value, RuntimeError> {
-        todo!()
+impl stmt::Visitor<()> for Interpreter {
+    fn visit_expression_stmt(&mut self, stmt: &Expression) -> anyhow::Result<(), RuntimeError> {
+        self.evaluate(stmt.statements())?;
+        Ok(())
+    }
+
+    fn visit_print_stmt(&mut self, stmt: &Print) -> anyhow::Result<(), RuntimeError> {
+        let value = self.evaluate(stmt.statements())?;
+        println!("{}", value);
+        Ok(())
     }
 }

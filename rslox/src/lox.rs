@@ -3,6 +3,8 @@ use crate::{cprint, cprintln, scanner};
 use anyhow::Result;
 use crate::ast_printer::AstPrinter;
 use crate::interpreter::Interpreter;
+use crate::parse_error::ParseError;
+use crate::runtime_error::RuntimeError;
 
 pub struct Lox {
     interpreter: Interpreter,
@@ -64,16 +66,13 @@ impl Lox {
         let tokens = scanner.scan_tokens();
 
         let mut parser = crate::parser::Parser::new(tokens);
-        let expr = parser.parse();
+        let statements = parser.parse();
 
         if Lox::had_error() {
             return Ok(());
         }
 
-        let mut printer = AstPrinter {};
-        println!("{}", printer.print(&expr.clone().unwrap()));
-        
-        self.interpreter.interpret(&expr.unwrap());
+        self.interpreter.interpret(&statements.clone().unwrap());
 
         Ok(())
     }
@@ -82,17 +81,17 @@ impl Lox {
         Lox::report(line, "", message);
     }
 
-    pub fn error_token(token: &crate::token::Token, message: &str) {
-        if token.token_type() == &crate::token_type::TokenType::Eof {
-            Lox::report(token.line(), " at end", message);
+    pub fn parse_error(parse_error: &ParseError) {
+        if parse_error.token().token_type() == &crate::token_type::TokenType::Eof {
+            Lox::report(parse_error.token().line(), " at end", parse_error.message());
         } else {
-            Lox::report(token.line(), &format!(" at '{}'", token.lexeme()), message);
+            Lox::report(parse_error.token().line(), &format!(" at '{}'", parse_error.token().lexeme()), parse_error.message());
         }
 
     }
 
-    pub fn runtime_error(token: &crate::token::Token, message: &str) {
-        cprintln!(colored::Color::Red, "{}\n[line {}]", message, token.line());
+    pub fn runtime_error(runtime_error: &RuntimeError) {
+        cprintln!(colored::Color::Red, "{}\n[line {}]", runtime_error.message(), runtime_error.token().line());
         HAD_RUNTIME_ERROR.store(true, Ordering::SeqCst);
     }
 
