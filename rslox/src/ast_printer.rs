@@ -25,6 +25,10 @@ impl AstPrinter {
 }
 
 impl expr::Visitor<String> for AstPrinter {
+    fn visit_assign_expr(&mut self, expr: &Assign) -> Result<String, RuntimeError> {
+        todo!()
+    }
+
     fn visit_binary_expr(&mut self, binary: &Binary) -> Result<String, RuntimeError> {
         self.parenthesize(&binary.operator().lexeme(), &[binary.left(), binary.right()])
         
@@ -45,5 +49,9 @@ impl expr::Visitor<String> for AstPrinter {
     
     fn visit_unary_expr(&mut self, unary: &Unary) -> Result<String, RuntimeError> {
         self.parenthesize(&unary.operator().lexeme(), &[unary.right()])
+    }
+
+    fn visit_variable_expr(&mut self, expr: &Variable) -> Result<String, RuntimeError> {
+        todo!()
     }
 }

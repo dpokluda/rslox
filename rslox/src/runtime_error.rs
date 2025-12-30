@@ -8,7 +8,10 @@ pub struct RuntimeError {
 
 impl RuntimeError {
     pub fn new(token: Token, message: String) -> Self {
-        RuntimeError { token, message }
+        RuntimeError { 
+            token, 
+            message, 
+        }
     }
 
     pub fn token(&self) -> &Token {

@@ -13,6 +13,7 @@ mod interpreter;
 mod value;
 mod parse_error;
 mod runtime_error;
+mod environment;
 
 use clap::{CommandFactory, Parser};
 use anyhow::Result;

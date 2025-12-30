@@ -1,14 +1,18 @@
-use crate::expr::{Expr, Binary, Grouping, Literal, Unary};
+use crate::expr::{Expr, Binary, Grouping, Literal, Unary, Variable, Assign};
 use crate::{expr, lox, stmt};
 use crate::runtime_error::RuntimeError;
-use crate::stmt::{Expression, Print, Stmt};
+use crate::stmt::{Block, Expression, Print, Stmt, Var};
 use crate::value::Value;
 
-pub struct Interpreter { }
+pub struct Interpreter {
+    environment: crate::environment::Environment,
+}
 
 impl Interpreter {
     pub fn new() -> Self {
-        Interpreter { }
+        Interpreter {
+            environment: crate::environment::Environment::new(),
+        }
     }
 
     pub fn interpret(&mut self, statements: &Vec<Stmt>) {
@@ -26,6 +30,21 @@ impl Interpreter {
     
     fn execute(&mut self, stmt: &stmt::Stmt) -> Result<(), RuntimeError> {
         stmt.accept(self)
+    }
+
+    fn execute_block(&mut self, statements: &Vec<Box<stmt::Stmt>>, environment: crate::environment::Environment) -> Result<(), RuntimeError> {
+        let previous = self.environment.clone();
+        self.environment = environment;
+
+        let result = (|| {
+            for statement in statements {
+                self.execute(&statement)?;
+            }
+            Ok(())
+        })();
+
+        self.environment = previous;
+        result
     }
 
     fn is_truthy(&self, value: &Value) -> bool {
@@ -59,6 +78,12 @@ impl Interpreter {
 }
 
 impl expr::Visitor<Value> for Interpreter {
+    fn visit_assign_expr(&mut self, expr: &Assign) -> anyhow::Result<Value, RuntimeError> {
+        let value = self.evaluate(expr.value())?;
+        self.environment.assign(expr.name(), value.clone())?;
+        Ok(value)
+    }
+
     fn visit_binary_expr(&mut self, binary: &Binary) -> anyhow::Result<Value, RuntimeError> {
         let left = self.evaluate(binary.left())?;
         let right = self.evaluate(binary.right())?;
@@ -150,9 +175,20 @@ impl expr::Visitor<Value> for Interpreter {
             )),
         }
     }
+
+    fn visit_variable_expr(&mut self, expr: &Variable) -> anyhow::Result<Value, RuntimeError> {
+        let value = self.environment.get(expr.name())?;
+        Ok(value.clone())
+    }
 }
 
 impl stmt::Visitor<()> for Interpreter {
+    fn visit_block_stmt(&mut self, stmt: &Block) -> anyhow::Result<(), RuntimeError> {
+        let new_environment = crate::environment::Environment::from_enclosing(self.environment.clone());
+        self.execute_block(stmt.statements(), new_environment)?;
+        Ok(())
+    }
+
     fn visit_expression_stmt(&mut self, stmt: &Expression) -> anyhow::Result<(), RuntimeError> {
         self.evaluate(stmt.statements())?;
         Ok(())
@@ -161,6 +197,16 @@ impl stmt::Visitor<()> for Interpreter {
     fn visit_print_stmt(&mut self, stmt: &Print) -> anyhow::Result<(), RuntimeError> {
         let value = self.evaluate(stmt.statements())?;
         println!("{}", value);
+        Ok(())
+    }
+
+    fn visit_var_stmt(&mut self, stmt: &Var) -> anyhow::Result<(), RuntimeError> {
+        let value = if let Some(initializer) = stmt.initializer() {
+            self.evaluate(initializer)?
+        } else {
+            Value::Nil
+        };
+        self.environment.define(stmt.name().lexeme().to_string(), value);
         Ok(())
     }
 }

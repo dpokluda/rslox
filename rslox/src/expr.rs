@@ -4,6 +4,30 @@ use crate::runtime_error::RuntimeError;
 use crate::token::Token;
 use anyhow::Result;
 
+// Assign
+#[derive(Debug, Clone, Eq, Hash, PartialEq)]
+pub struct Assign {
+    name: Token,
+    value: Box<Expr>,
+}
+
+impl Assign {
+    pub fn new(name: Token, value: Box<Expr>) -> Self {
+        Assign {
+            name,
+            value,
+        }
+    }
+
+    pub fn name(&self) -> &Token {
+        &self.name
+    }
+
+    pub fn value(&self) -> &Box<Expr> {
+        &self.value
+    }
+}
+
 // Binary
 #[derive(Debug, Clone, Eq, Hash, PartialEq)]
 pub struct Binary {
@@ -94,31 +118,55 @@ impl Unary {
     }
 }
 
+// Variable
+#[derive(Debug, Clone, Eq, Hash, PartialEq)]
+pub struct Variable {
+    name: Token,
+}
+
+impl Variable {
+    pub fn new(name: Token) -> Self {
+        Variable {
+            name,
+        }
+    }
+
+    pub fn name(&self) -> &Token {
+        &self.name
+    }
+}
+
 // Expression enum
 #[derive(Debug, Clone, Hash, Eq, PartialEq)]
 pub enum Expr {
+    Assign(Assign),
     Binary(Binary),
     Grouping(Grouping),
     Literal(Literal),
     Unary(Unary),
+    Variable(Variable),
 }
 
 // Visitor trait
 pub trait Visitor<T> {
+    fn visit_assign_expr(&mut self, expr: &Assign) -> Result<T, RuntimeError>;
     fn visit_binary_expr(&mut self, expr: &Binary) -> Result<T, RuntimeError>;
     fn visit_grouping_expr(&mut self, expr: &Grouping) -> Result<T, RuntimeError>;
     fn visit_literal_expr(&mut self, expr: &Literal) -> Result<T, RuntimeError>;
     fn visit_unary_expr(&mut self, expr: &Unary) -> Result<T, RuntimeError>;
+    fn visit_variable_expr(&mut self, expr: &Variable) -> Result<T, RuntimeError>;
 }
 
 // Implement accept for Expr
 impl Expr {
     pub fn accept<T>(&self, visitor: &mut dyn Visitor<T>) -> Result<T, RuntimeError> {
         match self {
+            Expr::Assign(expr) => visitor.visit_assign_expr(expr),
             Expr::Binary(expr) => visitor.visit_binary_expr(expr),
             Expr::Grouping(expr) => visitor.visit_grouping_expr(expr),
             Expr::Literal(expr) => visitor.visit_literal_expr(expr),
             Expr::Unary(expr) => visitor.visit_unary_expr(expr),
+            Expr::Variable(expr) => visitor.visit_variable_expr(expr),
         }
     }
 }

@@ -1,4 +1,3 @@
-use crate::runtime_error::RuntimeError;
 use crate::token::Token;
 
 #[derive(Debug, Clone)]
@@ -9,7 +8,10 @@ pub struct ParseError {
 
 impl ParseError {
     pub fn new(token: Token, message: String) -> Self {
-        ParseError { token, message }
+        ParseError { 
+            token, 
+            message, 
+        }
     }
 
     pub fn token(&self) -> &Token {
