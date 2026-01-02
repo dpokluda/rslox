@@ -41,6 +41,36 @@ impl Expression {
     }
 }
 
+// If
+#[derive(Debug, Clone, Eq, Hash, PartialEq)]
+pub struct If {
+    condition: Box<Expr>,
+    then_branch: Box<Stmt>,
+    else_branch: Option<Box<Stmt>>,
+}
+
+impl If {
+    pub fn new(condition: Box<Expr>, then_branch: Box<Stmt>, else_branch: Option<Box<Stmt>>) -> Self {
+        If {
+            condition,
+            then_branch,
+            else_branch,
+        }
+    }
+
+    pub fn condition(&self) -> &Box<Expr> {
+        &self.condition
+    }
+
+    pub fn then_branch(&self) -> &Box<Stmt> {
+        &self.then_branch
+    }
+
+    pub fn else_branch(&self) -> &Option<Box<Stmt>> {
+        &self.else_branch
+    }
+}
+
 // Print
 #[derive(Debug, Clone, Eq, Hash, PartialEq)]
 pub struct Print {
@@ -83,21 +113,49 @@ impl Var {
     }
 }
 
+// While
+#[derive(Debug, Clone, Eq, Hash, PartialEq)]
+pub struct While {
+    condition: Box<Expr>,
+    body: Box<Stmt>,
+}
+
+impl While {
+    pub fn new(condition: Box<Expr>, body: Box<Stmt>) -> Self {
+        While {
+            condition,
+            body,
+        }
+    }
+
+    pub fn condition(&self) -> &Box<Expr> {
+        &self.condition
+    }
+
+    pub fn body(&self) -> &Box<Stmt> {
+        &self.body
+    }
+}
+
 // Expression enum
 #[derive(Debug, Clone, Hash, Eq, PartialEq)]
 pub enum Stmt {
     Block(Block),
     Expression(Expression),
+    If(If),
     Print(Print),
     Var(Var),
+    While(While),
 }
 
 // Visitor trait
 pub trait Visitor<T> {
     fn visit_block_stmt(&mut self, stmt: &Block) -> Result<T, RuntimeError>;
     fn visit_expression_stmt(&mut self, stmt: &Expression) -> Result<T, RuntimeError>;
+    fn visit_if_stmt(&mut self, stmt: &If) -> Result<T, RuntimeError>;
     fn visit_print_stmt(&mut self, stmt: &Print) -> Result<T, RuntimeError>;
     fn visit_var_stmt(&mut self, stmt: &Var) -> Result<T, RuntimeError>;
+    fn visit_while_stmt(&mut self, stmt: &While) -> Result<T, RuntimeError>;
 }
 
 // Implement accept for Stmt
@@ -106,8 +164,10 @@ impl Stmt {
         match self {
             Stmt::Block(stmt) => visitor.visit_block_stmt(stmt),
             Stmt::Expression(stmt) => visitor.visit_expression_stmt(stmt),
+            Stmt::If(stmt) => visitor.visit_if_stmt(stmt),
             Stmt::Print(stmt) => visitor.visit_print_stmt(stmt),
             Stmt::Var(stmt) => visitor.visit_var_stmt(stmt),
+            Stmt::While(stmt) => visitor.visit_while_stmt(stmt),
         }
     }
 }

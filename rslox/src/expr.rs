@@ -94,6 +94,36 @@ impl Literal {
     }
 }
 
+// Logical
+#[derive(Debug, Clone, Eq, Hash, PartialEq)]
+pub struct Logical {
+    left: Box<Expr>,
+    operator: Token,
+    right: Box<Expr>,
+}
+
+impl Logical {
+    pub fn new(left: Box<Expr>, operator: Token, right: Box<Expr>) -> Self {
+        Logical {
+            left,
+            operator,
+            right,
+        }
+    }
+
+    pub fn left(&self) -> &Box<Expr> {
+        &self.left
+    }
+
+    pub fn operator(&self) -> &Token {
+        &self.operator
+    }
+
+    pub fn right(&self) -> &Box<Expr> {
+        &self.right
+    }
+}
+
 // Unary
 #[derive(Debug, Clone, Eq, Hash, PartialEq)]
 pub struct Unary {
@@ -143,6 +173,7 @@ pub enum Expr {
     Binary(Binary),
     Grouping(Grouping),
     Literal(Literal),
+    Logical(Logical),
     Unary(Unary),
     Variable(Variable),
 }
@@ -153,6 +184,7 @@ pub trait Visitor<T> {
     fn visit_binary_expr(&mut self, expr: &Binary) -> Result<T, RuntimeError>;
     fn visit_grouping_expr(&mut self, expr: &Grouping) -> Result<T, RuntimeError>;
     fn visit_literal_expr(&mut self, expr: &Literal) -> Result<T, RuntimeError>;
+    fn visit_logical_expr(&mut self, expr: &Logical) -> Result<T, RuntimeError>;
     fn visit_unary_expr(&mut self, expr: &Unary) -> Result<T, RuntimeError>;
     fn visit_variable_expr(&mut self, expr: &Variable) -> Result<T, RuntimeError>;
 }
@@ -165,6 +197,7 @@ impl Expr {
             Expr::Binary(expr) => visitor.visit_binary_expr(expr),
             Expr::Grouping(expr) => visitor.visit_grouping_expr(expr),
             Expr::Literal(expr) => visitor.visit_literal_expr(expr),
+            Expr::Logical(expr) => visitor.visit_logical_expr(expr),
             Expr::Unary(expr) => visitor.visit_unary_expr(expr),
             Expr::Variable(expr) => visitor.visit_variable_expr(expr),
         }

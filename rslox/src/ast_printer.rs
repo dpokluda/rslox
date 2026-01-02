@@ -46,7 +46,11 @@ impl expr::Visitor<String> for AstPrinter {
             crate::literal::LiteralValue::Nil => Ok("nil".to_string()),
         }
     }
-    
+
+    fn visit_logical_expr(&mut self, expr: &Logical) -> Result<String, RuntimeError> {
+        todo!()
+    }
+
     fn visit_unary_expr(&mut self, unary: &Unary) -> Result<String, RuntimeError> {
         self.parenthesize(&unary.operator().lexeme(), &[unary.right()])
     }

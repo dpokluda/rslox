@@ -50,10 +50,17 @@ impl Parser {
             }
         }
     }
-    
+
     fn statement(&mut self) -> Result<Stmt, ParseError> {
-        if self.match_token(&[TokenType::Print]) {
+        if self.match_token(&[TokenType::For]) {
+            self.for_statement()
+        } else if self.match_token(&[TokenType::If]) {
+            self.if_statement()
+        } else if self.match_token(&[TokenType::Print]) {
             self.print_statement()
+        }
+        else if self.match_token(&[TokenType::While]) {
+            self.while_statement()
         } else if self.match_token(&[TokenType::LeftBrace]) {
             self.block_statement()
         } else {
@@ -61,12 +68,72 @@ impl Parser {
         }
     }
 
+    fn for_statement(&mut self) -> Result<Stmt, ParseError> {
+        self.consume(TokenType::LeftParen, "Expect '(' after 'for'.")?;
+
+        let initializer = if self.match_token(&[TokenType::Semicolon]) {
+            None
+        } else if self.match_token(&[TokenType::Var]) {
+            Some(self.var_declaration()?)
+        } else {
+            Some(self.expression_statement()?)
+        };
+
+        let condition = if !self.check(&TokenType::Semicolon) {
+            self.expression()?
+        } else {
+            Expr::Literal(Literal::new(LiteralValue::Boolean(true)))
+        };
+        self.consume(TokenType::Semicolon, "Expect ';' after loop condition.")?;
+
+        let increment = if !self.check(&TokenType::RightParen) {
+            Some(self.expression()?)
+        } else {
+            None
+        };
+        self.consume(TokenType::RightParen, "Expect ')' after for clauses.")?;
+
+        let mut body = self.statement()?;
+
+        if let Some(inc) = increment {
+            body = Stmt::Block(Block::new(vec![
+                Box::new(body),
+                Box::new(Stmt::Expression(Expression::new(Box::new(inc)))),
+            ]));
+        }
+
+        body = Stmt::While(While::new(Box::new(condition), Box::new(body)));
+
+        if let Some(init) = initializer {
+            body = Stmt::Block(Block::new(vec![
+                Box::new(init),
+                Box::new(body),
+            ]));
+        }
+
+        Ok(body)
+    }
+
+    fn if_statement(&mut self) -> Result<Stmt, ParseError> {
+        self.consume(TokenType::LeftParen, "Expect '(' after 'if'.")?;
+        let condition = self.expression()?;
+        self.consume(TokenType::RightParen, "Expect ')' after if condition.")?;
+
+        let then_branch = Box::new(self.statement()?);
+        let mut else_branch = None;
+        if self.match_token(&[TokenType::Else]) {
+            else_branch = Some(Box::new(self.statement()?));
+        }
+
+        Ok(Stmt::If(If::new(Box::new(condition), then_branch, else_branch)))
+    }
+
     fn print_statement(&mut self) -> Result<Stmt, ParseError> {
         let value = self.expression()?;
         self.consume(TokenType::Semicolon, "Expect ';' after value.")?;
         Ok(Stmt::Print(Print::new(Box::new(value))))
     }
-    
+
     fn var_declaration(&mut self) -> Result<Stmt, ParseError> {
         let name = self.consume(TokenType::Identifier, "Expect variable name.")?.clone();
 
@@ -79,12 +146,21 @@ impl Parser {
         Ok(Stmt::Var(Var::new(name, initializer.map(Box::new))))
     }
 
+    fn while_statement(&mut self) -> Result<Stmt, ParseError> {
+        self.consume(TokenType::LeftParen, "Expect '(' after 'while'.")?;
+        let condition = self.expression()?;
+        self.consume(TokenType::RightParen, "Expect ')' after condition.")?;
+        let body = Box::new(self.statement()?);
+
+        Ok(Stmt::While(While::new(Box::new(condition), body)))
+    }
+
     fn expression_statement(&mut self) -> Result<Stmt, ParseError> {
         let expr = self.expression()?;
         self.consume(TokenType::Semicolon, "Expect ';' after expression.")?;
         Ok(Stmt::Expression(Expression::new(Box::new(expr))))
     }
-    
+
     fn block_statement(&mut self) -> Result<Stmt, ParseError> {
         let mut statements = vec![];
 
@@ -96,9 +172,9 @@ impl Parser {
         self.consume(TokenType::RightBrace, "Expect '}' after block.")?;
         Ok(Stmt::Block(Block::new(statements.into_iter().map(Box::new).collect())))
     }
-    
+
     fn assignment(&mut self) -> Result<Expr, ParseError> {
-        let expr = self.equality()?;
+        let expr = self.or()?;
 
         if self.match_token(&[TokenType::Equal]) {
             let equals = self.previous().clone();
@@ -115,9 +191,33 @@ impl Parser {
         Ok(expr)
     }
 
+    fn or(&mut self) -> Result<Expr, ParseError> {
+        let mut expr = self.and()?;
+
+        while self.match_token(&[TokenType::Or]) {
+            let operator = self.previous().clone();
+            let right = self.and()?;
+            expr = Expr::Logical(Logical::new(Box::new(expr), operator, Box::new(right)));
+        }
+
+        Ok(expr)
+    }
+
+    fn and(&mut self) -> Result<Expr, ParseError> {
+        let mut expr = self.equality()?;
+
+        while self.match_token(&[TokenType::And]) {
+            let operator = self.previous().clone();
+            let right = self.equality()?;
+            expr = Expr::Logical(Logical::new(Box::new(expr), operator, Box::new(right)));
+        }
+
+        Ok(expr)
+    }
+
     fn equality(&mut self) -> Result<Expr, ParseError> {
         let mut expr = self.comparison()?;
-        while self.match_token(&[TokenType::Plus, TokenType::Minus]) {
+        while self.match_token(&[TokenType::BangEqual, TokenType::EqualEqual]) {
             let operator = self.previous().clone();
             let right = self.comparison()?;
             expr = Expr::Binary(Binary::new(Box::new(expr), operator, Box::new(right)));
@@ -139,7 +239,7 @@ impl Parser {
 
     fn term(&mut self) -> Result<Expr, ParseError> {
         let mut expr = self.factor()?;
-        while self.match_token(&[TokenType::Star, TokenType::Slash]) {
+        while self.match_token(&[TokenType::Plus, TokenType::Minus]) {
             let operator = self.previous().clone();
             let right = self.factor()?;
             expr = Expr::Binary(Binary::new(Box::new(expr), operator, Box::new(right)));

@@ -177,18 +177,18 @@ fn main() -> Result<()> {
         "Expr",
         &args.output,
         vec![
-            // "Assign   : Token name, Box<Expr> value",
+            "Assign   : Token name, Box<Expr> value",
             "Binary   : Box<Expr> left, Token operator, Box<Expr> right",
             // "Call     : Box<Expr> callee, Token paren, Vec<Box<Expr>> arguments",
             // "Get      : Box<Expr> object, Token name",
             "Grouping : Box<Expr> expression",
             "Literal  : LiteralValue value",
-            // "Logical  : Box<Expr> left, Token operator, Box<Expr> right",
+            "Logical  : Box<Expr> left, Token operator, Box<Expr> right",
             // "Set      : Box<Expr> object, Token name, Box<Expr> value",
             // "Super    : Token keyword, Token method",
             // "This     : Token keyword",
             "Unary    : Token operator, Box<Expr> right",
-            // "Variable : Token name"
+            "Variable : Token name"
         ]);
 
         let _ = GenerateAst::define_ast(
@@ -200,15 +200,15 @@ fn main() -> Result<()> {
         "Stmt",
         &args.output,
         vec![
-            // "Block      : Vec<Box<Stmt>> statements",
+            "Block      : Vec<Box<Stmt>> statements",
             // "Class      : Token name, Option<Box<Expr>> superclass, Vec<Box<Function>> methods",
             "Expression : Box<Expr> statements",
             // "Function   : Token name, Vec<Token> params, Vec<Box<Stmt>> body",
-            // "If         : Box<Expr> condition, Box<Stmt> then_branch, Option<Box<Stmt>> else_branch",
+            "If         : Box<Expr> condition, Box<Stmt> then_branch, Option<Box<Stmt>> else_branch",
             "Print      : Box<Expr> statements",
             // "Return     : Token keyword, Option<Box<Expr>> value",
-            // "Var        : Token name, Option<Box<Expr>> initializer",
-            // "While      : Box<Expr> condition, Box<Stmt> body"
+            "Var        : Token name, Option<Box<Expr>> initializer",
+            "While      : Box<Expr> condition, Box<Stmt> body"
         ]);
     
     cprintln!(colored::Color::Green, "Finished.");
