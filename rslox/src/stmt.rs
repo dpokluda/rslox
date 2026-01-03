@@ -1,6 +1,5 @@
 //[ Appendix II stmt
-use crate::literal::LiteralValue;
-use crate::runtime_error::RuntimeError;
+use crate::runtime_error::LoxRuntime;
 use crate::token::Token;
 use crate::expr::Expr;
 use anyhow::Result;
@@ -38,6 +37,36 @@ impl Expression {
 
     pub fn statements(&self) -> &Box<Expr> {
         &self.statements
+    }
+}
+
+// Function
+#[derive(Debug, Clone, Eq, Hash, PartialEq)]
+pub struct Function {
+    name: Token,
+    params: Vec<Token>,
+    body: Vec<Box<Stmt>>,
+}
+
+impl Function {
+    pub fn new(name: Token, params: Vec<Token>, body: Vec<Box<Stmt>>) -> Self {
+        Function {
+            name,
+            params,
+            body,
+        }
+    }
+
+    pub fn name(&self) -> &Token {
+        &self.name
+    }
+
+    pub fn params(&self) -> &Vec<Token> {
+        &self.params
+    }
+
+    pub fn body(&self) -> &Vec<Box<Stmt>> {
+        &self.body
     }
 }
 
@@ -86,6 +115,30 @@ impl Print {
 
     pub fn statements(&self) -> &Box<Expr> {
         &self.statements
+    }
+}
+
+// Return
+#[derive(Debug, Clone, Eq, Hash, PartialEq)]
+pub struct Return {
+    keyword: Token,
+    value: Option<Box<Expr>>,
+}
+
+impl Return {
+    pub fn new(keyword: Token, value: Option<Box<Expr>>) -> Self {
+        Return {
+            keyword,
+            value,
+        }
+    }
+
+    pub fn keyword(&self) -> &Token {
+        &self.keyword
+    }
+
+    pub fn value(&self) -> &Option<Box<Expr>> {
+        &self.value
     }
 }
 
@@ -142,30 +195,36 @@ impl While {
 pub enum Stmt {
     Block(Block),
     Expression(Expression),
+    Function(Function),
     If(If),
     Print(Print),
+    Return(Return),
     Var(Var),
     While(While),
 }
 
 // Visitor trait
 pub trait Visitor<T> {
-    fn visit_block_stmt(&mut self, stmt: &Block) -> Result<T, RuntimeError>;
-    fn visit_expression_stmt(&mut self, stmt: &Expression) -> Result<T, RuntimeError>;
-    fn visit_if_stmt(&mut self, stmt: &If) -> Result<T, RuntimeError>;
-    fn visit_print_stmt(&mut self, stmt: &Print) -> Result<T, RuntimeError>;
-    fn visit_var_stmt(&mut self, stmt: &Var) -> Result<T, RuntimeError>;
-    fn visit_while_stmt(&mut self, stmt: &While) -> Result<T, RuntimeError>;
+    fn visit_block_stmt(&mut self, stmt: &Block) -> Result<T, LoxRuntime>;
+    fn visit_expression_stmt(&mut self, stmt: &Expression) -> Result<T, LoxRuntime>;
+    fn visit_function_stmt(&mut self, stmt: &Function) -> Result<T, LoxRuntime>;
+    fn visit_if_stmt(&mut self, stmt: &If) -> Result<T, LoxRuntime>;
+    fn visit_print_stmt(&mut self, stmt: &Print) -> Result<T, LoxRuntime>;
+    fn visit_return_stmt(&mut self, stmt: &Return) -> Result<T, LoxRuntime>;
+    fn visit_var_stmt(&mut self, stmt: &Var) -> Result<T, LoxRuntime>;
+    fn visit_while_stmt(&mut self, stmt: &While) -> Result<T, LoxRuntime>;
 }
 
 // Implement accept for Stmt
 impl Stmt {
-    pub fn accept<T>(&self, visitor: &mut dyn Visitor<T>) -> Result<T, RuntimeError> {
+    pub fn accept<T>(&self, visitor: &mut dyn Visitor<T>) -> Result<T, LoxRuntime> {
         match self {
             Stmt::Block(stmt) => visitor.visit_block_stmt(stmt),
             Stmt::Expression(stmt) => visitor.visit_expression_stmt(stmt),
+            Stmt::Function(stmt) => visitor.visit_function_stmt(stmt),
             Stmt::If(stmt) => visitor.visit_if_stmt(stmt),
             Stmt::Print(stmt) => visitor.visit_print_stmt(stmt),
+            Stmt::Return(stmt) => visitor.visit_return_stmt(stmt),
             Stmt::Var(stmt) => visitor.visit_var_stmt(stmt),
             Stmt::While(stmt) => visitor.visit_while_stmt(stmt),
         }

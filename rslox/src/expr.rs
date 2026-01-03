@@ -1,6 +1,6 @@
 //[ Appendix II expr
 use crate::literal::LiteralValue;
-use crate::runtime_error::RuntimeError;
+use crate::runtime_error::LoxRuntime;
 use crate::token::Token;
 use anyhow::Result;
 
@@ -55,6 +55,36 @@ impl Binary {
 
     pub fn right(&self) -> &Box<Expr> {
         &self.right
+    }
+}
+
+// Call
+#[derive(Debug, Clone, Eq, Hash, PartialEq)]
+pub struct Call {
+    callee: Box<Expr>,
+    paren: Token,
+    arguments: Vec<Box<Expr>>,
+}
+
+impl Call {
+    pub fn new(callee: Box<Expr>, paren: Token, arguments: Vec<Box<Expr>>) -> Self {
+        Call {
+            callee,
+            paren,
+            arguments,
+        }
+    }
+
+    pub fn callee(&self) -> &Box<Expr> {
+        &self.callee
+    }
+
+    pub fn paren(&self) -> &Token {
+        &self.paren
+    }
+
+    pub fn arguments(&self) -> &Vec<Box<Expr>> {
+        &self.arguments
     }
 }
 
@@ -171,6 +201,7 @@ impl Variable {
 pub enum Expr {
     Assign(Assign),
     Binary(Binary),
+    Call(Call),
     Grouping(Grouping),
     Literal(Literal),
     Logical(Logical),
@@ -180,21 +211,23 @@ pub enum Expr {
 
 // Visitor trait
 pub trait Visitor<T> {
-    fn visit_assign_expr(&mut self, expr: &Assign) -> Result<T, RuntimeError>;
-    fn visit_binary_expr(&mut self, expr: &Binary) -> Result<T, RuntimeError>;
-    fn visit_grouping_expr(&mut self, expr: &Grouping) -> Result<T, RuntimeError>;
-    fn visit_literal_expr(&mut self, expr: &Literal) -> Result<T, RuntimeError>;
-    fn visit_logical_expr(&mut self, expr: &Logical) -> Result<T, RuntimeError>;
-    fn visit_unary_expr(&mut self, expr: &Unary) -> Result<T, RuntimeError>;
-    fn visit_variable_expr(&mut self, expr: &Variable) -> Result<T, RuntimeError>;
+    fn visit_assign_expr(&mut self, expr: &Assign) -> Result<T, LoxRuntime>;
+    fn visit_binary_expr(&mut self, expr: &Binary) -> Result<T, LoxRuntime>;
+    fn visit_call_expr(&mut self, expr: &Call) -> Result<T, LoxRuntime>;
+    fn visit_grouping_expr(&mut self, expr: &Grouping) -> Result<T, LoxRuntime>;
+    fn visit_literal_expr(&mut self, expr: &Literal) -> Result<T, LoxRuntime>;
+    fn visit_logical_expr(&mut self, expr: &Logical) -> Result<T, LoxRuntime>;
+    fn visit_unary_expr(&mut self, expr: &Unary) -> Result<T, LoxRuntime>;
+    fn visit_variable_expr(&mut self, expr: &Variable) -> Result<T, LoxRuntime>;
 }
 
 // Implement accept for Expr
 impl Expr {
-    pub fn accept<T>(&self, visitor: &mut dyn Visitor<T>) -> Result<T, RuntimeError> {
+    pub fn accept<T>(&self, visitor: &mut dyn Visitor<T>) -> Result<T, LoxRuntime> {
         match self {
             Expr::Assign(expr) => visitor.visit_assign_expr(expr),
             Expr::Binary(expr) => visitor.visit_binary_expr(expr),
+            Expr::Call(expr) => visitor.visit_call_expr(expr),
             Expr::Grouping(expr) => visitor.visit_grouping_expr(expr),
             Expr::Literal(expr) => visitor.visit_literal_expr(expr),
             Expr::Logical(expr) => visitor.visit_logical_expr(expr),

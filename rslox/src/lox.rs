@@ -1,7 +1,6 @@
 use std::sync::atomic::{AtomicBool, Ordering};
 use crate::{cprint, cprintln, scanner};
 use anyhow::Result;
-use crate::ast_printer::AstPrinter;
 use crate::interpreter::Interpreter;
 use crate::parse_error::ParseError;
 use crate::runtime_error::RuntimeError;

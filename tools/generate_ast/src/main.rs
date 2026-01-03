@@ -109,9 +109,9 @@ impl GenerateAst {
         for t in types {
             let type_descr: Vec<&str> = t.split(':').collect();
             let type_name = type_descr[0].trim();
-            let safe_type_name = Self::safe_ident(&type_name.to_lowercase());
+            // let safe_type_name = Self::safe_ident(&type_name.to_lowercase());
             file.write_all(format!(
-                "    fn visit_{}_{}(&mut self, {}: &{}) -> Result<T, RuntimeError>;\n",
+                "    fn visit_{}_{}(&mut self, {}: &{}) -> Result<T, LoxRuntime>;\n",
                 type_name.to_lowercase(), base_name.to_lowercase(), base_name.to_lowercase(), type_name
             ).as_bytes())?;
         }
@@ -120,12 +120,12 @@ impl GenerateAst {
         // Implement `accept()`
         file.write_all(format!("\n// Implement accept for {}", base_name).as_bytes())?;
         file.write_all(format!("\nimpl {} {{\n", base_name).as_bytes())?;
-        file.write_all("    pub fn accept<T>(&self, visitor: &mut dyn Visitor<T>) -> Result<T, RuntimeError> {\n".as_bytes())?;
+        file.write_all("    pub fn accept<T>(&self, visitor: &mut dyn Visitor<T>) -> Result<T, LoxRuntime> {\n".as_bytes())?;
         file.write_all("        match self {\n".as_bytes())?;
         for t in types {
             let type_descr: Vec<&str> = t.split(':').collect();
             let type_name = type_descr[0].trim();
-            let safe_type_name = Self::safe_ident(&type_name.to_lowercase());
+            // let safe_type_name = Self::safe_ident(&type_name.to_lowercase());
             file.write_all(format!(
                 "            {}::{}({}) => visitor.visit_{}_{}({}),\n",
                 base_name, type_name, base_name.to_lowercase(), type_name.to_lowercase(), base_name.to_lowercase(), base_name.to_lowercase()
@@ -170,8 +170,9 @@ fn main() -> Result<()> {
     }
 
     let _ = GenerateAst::define_ast(
-        vec!["use crate::literal::LiteralValue;\n",
-             "use crate::runtime_error::RuntimeError;\n",
+        vec![
+             "use crate::literal::LiteralValue;\n",
+             "use crate::runtime_error::LoxRuntime;\n",
              "use crate::token::Token;\n",
              "use anyhow::Result;\n"],
         "Expr",
@@ -179,7 +180,7 @@ fn main() -> Result<()> {
         vec![
             "Assign   : Token name, Box<Expr> value",
             "Binary   : Box<Expr> left, Token operator, Box<Expr> right",
-            // "Call     : Box<Expr> callee, Token paren, Vec<Box<Expr>> arguments",
+            "Call     : Box<Expr> callee, Token paren, Vec<Box<Expr>> arguments",
             // "Get      : Box<Expr> object, Token name",
             "Grouping : Box<Expr> expression",
             "Literal  : LiteralValue value",
@@ -192,8 +193,8 @@ fn main() -> Result<()> {
         ]);
 
         let _ = GenerateAst::define_ast(
-        vec!["use crate::literal::LiteralValue;\n",
-             "use crate::runtime_error::RuntimeError;\n",
+        vec![
+             "use crate::runtime_error::LoxRuntime;\n",
              "use crate::token::Token;\n",
              "use crate::expr::Expr;\n",
              "use anyhow::Result;\n"],
@@ -203,10 +204,10 @@ fn main() -> Result<()> {
             "Block      : Vec<Box<Stmt>> statements",
             // "Class      : Token name, Option<Box<Expr>> superclass, Vec<Box<Function>> methods",
             "Expression : Box<Expr> statements",
-            // "Function   : Token name, Vec<Token> params, Vec<Box<Stmt>> body",
+            "Function   : Token name, Vec<Token> params, Vec<Box<Stmt>> body",
             "If         : Box<Expr> condition, Box<Stmt> then_branch, Option<Box<Stmt>> else_branch",
             "Print      : Box<Expr> statements",
-            // "Return     : Token keyword, Option<Box<Expr>> value",
+            "Return     : Token keyword, Option<Box<Expr>> value",
             "Var        : Token name, Option<Box<Expr>> initializer",
             "While      : Box<Expr> condition, Box<Stmt> body"
         ]);

@@ -1,42 +1,67 @@
-use crate::expr::{Expr, Binary, Grouping, Literal, Unary, Variable, Assign, Logical};
-use crate::{expr, lox, stmt};
-use crate::runtime_error::RuntimeError;
-use crate::stmt::{Block, Expression, If, Print, Stmt, Var, While};
+use crate::expr::{Expr, Binary, Grouping, Literal, Unary, Variable, Assign, Logical, Call};
+use crate::{expr, stmt};
+use crate::runtime_error::{LoxRuntime, RuntimeError, RuntimeReturn};
+use crate::stmt::{Block, Expression, Function, If, Print, Return, Stmt, Var, While};
 use crate::value::Value;
 use std::rc::Rc;
 use std::cell::RefCell;
 
 pub struct Interpreter {
     environment: Rc<RefCell<crate::environment::Environment>>,
+    global: Rc<RefCell<crate::environment::Environment>>,
+
 }
 
 impl Interpreter {
     pub fn new() -> Self {
+        let global = Rc::new(RefCell::new(crate::environment::Environment::new()));
+
+        global.borrow_mut().define(
+            "clock".to_string(),
+            Value::LoxCallable(Rc::new(crate::lox_clock::LoxClock::new())),
+        );
+
         Interpreter {
-            environment: Rc::new(RefCell::new(crate::environment::Environment::new())),
+            environment: global.clone(),
+            global,
         }
+    }
+
+    pub fn globals(&self) -> Rc<RefCell<crate::environment::Environment>> {
+        Rc::clone(&self.global)
     }
 
     pub fn interpret(&mut self, statements: &Vec<Stmt>) {
         for statement in statements {
             match self.execute(&statement) {
                 Ok(_) => {},
-                Err(e) => lox::Lox::runtime_error(&e),
+                Err(e) => {
+                    match e {
+                        LoxRuntime::Error(runtime_error) => {
+                            crate::lox::Lox::runtime_error(&runtime_error);
+                        },
+                        LoxRuntime::Return(_) => {
+                            // This should never happen at the top level.
+                            panic!("Unexpected return statement at top level.");
+                        },
+                    }
+                }
             }
         }
     }
 
-    fn evaluate(&mut self, expr: &Expr) -> Result<Value, RuntimeError> {
+    fn evaluate(&mut self, expr: &Expr) -> Result<Value, LoxRuntime> {
         expr.accept(self)
     }
 
-    fn execute(&mut self, stmt: &stmt::Stmt) -> Result<(), RuntimeError> {
+    fn execute(&mut self, stmt: &stmt::Stmt) -> Result<(), LoxRuntime> {
         stmt.accept(self)
     }
 
-    fn execute_block(&mut self, statements: &Vec<Box<stmt::Stmt>>, environment: Rc<RefCell<crate::environment::Environment>>) -> Result<(), RuntimeError> {
-        let previous = std::mem::replace(&mut self.environment, environment);
-
+    pub fn execute_block(&mut self, statements: &Vec<Box<stmt::Stmt>>, environment: Rc<RefCell<crate::environment::Environment>>) -> Result<(), LoxRuntime> {
+        let previous = Rc::clone(&self.environment);
+        self.environment = environment;
+        
         let result = (|| {
             for statement in statements {
                 self.execute(&statement)?;
@@ -57,35 +82,36 @@ impl Interpreter {
     }
 
     fn is_equal(&self, a: &Value, b: &Value) -> bool {
-        if a == &Value::Nil && b == &Value::Nil {
-            true
-        } else if a == &Value::Nil || b == &Value::Nil {
-            false
-        } else {
-            a == b
+        match (a, b) {
+            (Value::Nil, Value::Nil) => true,
+            (Value::Nil, _) => false,
+            (Value::Number(x), Value::Number(y)) => x == y,
+            (Value::Boolean(x), Value::Boolean(y)) => x == y,
+            (Value::String(x), Value::String(y)) => x == y,
+            _ => false,
         }
     }
 
-    fn check_number_operand(&self, operator: &crate::token::Token, operand: &Value) -> Result<f64, RuntimeError> {
+    fn check_number_operand(&self, operator: &crate::token::Token, operand: &Value) -> Result<f64, LoxRuntime> {
         if let Value::Number(n) = operand {
             Ok(*n)
         } else {
-            Err(RuntimeError::new(
+            Err(LoxRuntime::Error(RuntimeError::new(
                 operator.clone(),
                 "Operand must be a number.".to_string(),
-            ))
+            )))
         }
     }
 }
 
 impl expr::Visitor<Value> for Interpreter {
-    fn visit_assign_expr(&mut self, expr: &Assign) -> anyhow::Result<Value, RuntimeError> {
+    fn visit_assign_expr(&mut self, expr: &Assign) -> anyhow::Result<Value, LoxRuntime> {
         let value = self.evaluate(expr.value())?;
         self.environment.borrow_mut().assign(expr.name(), value.clone())?;
         Ok(value)
     }
 
-    fn visit_binary_expr(&mut self, binary: &Binary) -> anyhow::Result<Value, RuntimeError> {
+    fn visit_binary_expr(&mut self, binary: &Binary) -> anyhow::Result<Value, LoxRuntime> {
         let left = self.evaluate(binary.left())?;
         let right = self.evaluate(binary.right())?;
         match binary.operator().token_type() {
@@ -93,10 +119,10 @@ impl expr::Visitor<Value> for Interpreter {
                 match (left, right) {
                     (Value::Number(l), Value::Number(r)) => Ok(Value::Number(l + r)),
                     (Value::String(l), Value::String(r)) => Ok(Value::String(l + &r)),
-                    _ => Err(RuntimeError::new(
+                    _ => Err(LoxRuntime::Error(RuntimeError::new(
                         binary.operator().clone(),
                         "Operands must be two numbers or two strings.".to_string(),
-                    )),
+                    ))),
                 }
             },
             crate::token::TokenType::Minus => {
@@ -140,18 +166,43 @@ impl expr::Visitor<Value> for Interpreter {
             crate::token::TokenType::BangEqual => {
                 Ok(Value::Boolean(!self.is_equal(&left, &right)))
             },
-            _ => Err(RuntimeError::new(
+            _ => Err(LoxRuntime::Error(RuntimeError::new(
                 binary.operator().clone(),
                 "Unknown binary operator.".to_string(),
-            )),
+            ))),
         }
     }
 
-    fn visit_grouping_expr(&mut self, grouping: &Grouping) -> anyhow::Result<Value, RuntimeError> {
+    fn visit_call_expr(&mut self, expr: &Call) -> anyhow::Result<Value, LoxRuntime> {
+        let callee = self.evaluate(expr.callee())?;
+
+        let mut arguments = Vec::new();
+        for argument in expr.arguments() {
+            arguments.push(self.evaluate(argument)?);
+        }
+
+        match callee {
+            Value::LoxCallable(function) => {
+                if arguments.len() != function.arity() {
+                    return Err(LoxRuntime::Error(RuntimeError::new(
+                        expr.paren().clone(),
+                        format!("Expected {} arguments but got {}.", function.arity(), arguments.len()),
+                    )));
+                }
+                function.call(self, arguments)
+            },
+            _ => Err(LoxRuntime::Error(RuntimeError::new(
+                expr.paren().clone(),
+                "Can only call functions and classes.".to_string(),
+            ))),
+        }
+    }
+
+    fn visit_grouping_expr(&mut self, grouping: &Grouping) -> anyhow::Result<Value, LoxRuntime> {
         self.evaluate(grouping.expression())
     }
 
-    fn visit_literal_expr(&mut self, literal: &Literal) -> anyhow::Result<Value, RuntimeError> {
+    fn visit_literal_expr(&mut self, literal: &Literal) -> anyhow::Result<Value, LoxRuntime> {
         match &literal.value() {
             crate::literal::LiteralValue::Number(n) => Ok(Value::Number(*n)),
             crate::literal::LiteralValue::Boolean(b) => Ok(Value::Boolean(*b)),
@@ -160,7 +211,7 @@ impl expr::Visitor<Value> for Interpreter {
         }
     }
 
-    fn visit_logical_expr(&mut self, expr: &Logical) -> anyhow::Result<Value, RuntimeError> {
+    fn visit_logical_expr(&mut self, expr: &Logical) -> anyhow::Result<Value, LoxRuntime> {
         let left = self.evaluate(expr.left())?;
         match expr.operator().token_type() {
             crate::token::TokenType::Or => {
@@ -177,14 +228,14 @@ impl expr::Visitor<Value> for Interpreter {
                     self.evaluate(expr.right())
                 }
             },
-            _ => Err(RuntimeError::new(
+            _ => Err(LoxRuntime::Error(RuntimeError::new(
                 expr.operator().clone(),
                 "Unknown logical operator.".to_string(),
-            )),
+            ))),
         }
     }
 
-    fn visit_unary_expr(&mut self, unary: &Unary) -> anyhow::Result<Value, RuntimeError> {
+    fn visit_unary_expr(&mut self, unary: &Unary) -> anyhow::Result<Value, LoxRuntime> {
         let right = self.evaluate(unary.right())?;
         match unary.operator().token_type() {
             crate::token::TokenType::Minus => {
@@ -194,31 +245,40 @@ impl expr::Visitor<Value> for Interpreter {
             crate::token::TokenType::Bang => {
                 Ok(Value::Boolean(!self.is_truthy(&right)))
             },
-            _ => Err(RuntimeError::new(
+            _ => Err(LoxRuntime::Error(RuntimeError::new(
                 unary.operator().clone(),
                 "Unknown unary operator.".to_string(),
-            )),
+            ))),
         }
     }
 
-    fn visit_variable_expr(&mut self, expr: &Variable) -> anyhow::Result<Value, RuntimeError> {
+    fn visit_variable_expr(&mut self, expr: &Variable) -> anyhow::Result<Value, LoxRuntime> {
         self.environment.borrow().get(expr.name())
     }
 }
 
 impl stmt::Visitor<()> for Interpreter {
-    fn visit_block_stmt(&mut self, stmt: &Block) -> anyhow::Result<(), RuntimeError> {
+    fn visit_block_stmt(&mut self, stmt: &Block) -> anyhow::Result<(), LoxRuntime> {
         let new_environment = Rc::new(RefCell::new(crate::environment::Environment::from_enclosing(self.environment.clone())));
         self.execute_block(stmt.statements(), new_environment)?;
         Ok(())
     }
 
-    fn visit_expression_stmt(&mut self, stmt: &Expression) -> anyhow::Result<(), RuntimeError> {
+    fn visit_expression_stmt(&mut self, stmt: &Expression) -> anyhow::Result<(), LoxRuntime> {
         self.evaluate(stmt.statements())?;
         Ok(())
     }
 
-    fn visit_if_stmt(&mut self, stmt: &If) -> anyhow::Result<(), RuntimeError> {
+    fn visit_function_stmt(&mut self, stmt: &Function) -> anyhow::Result<(), LoxRuntime> {
+        let function = crate::lox_function::LoxFunction::new(Box::new(stmt.clone()));
+        self.environment.borrow_mut().define(
+            stmt.name().lexeme().to_string(),
+            Value::LoxCallable(Rc::new(function)),
+        );
+        Ok(())
+    }
+
+    fn visit_if_stmt(&mut self, stmt: &If) -> anyhow::Result<(), LoxRuntime> {
         let condition = self.evaluate(stmt.condition())?;
         if self.is_truthy(&condition) {
             self.execute(stmt.then_branch())?;
@@ -228,13 +288,22 @@ impl stmt::Visitor<()> for Interpreter {
         Ok(())
     }
 
-    fn visit_print_stmt(&mut self, stmt: &Print) -> anyhow::Result<(), RuntimeError> {
+    fn visit_print_stmt(&mut self, stmt: &Print) -> anyhow::Result<(), LoxRuntime> {
         let value = self.evaluate(stmt.statements())?;
         println!("{}", value);
         Ok(())
     }
 
-    fn visit_var_stmt(&mut self, stmt: &Var) -> anyhow::Result<(), RuntimeError> {
+    fn visit_return_stmt(&mut self, stmt: &Return) -> anyhow::Result<(), LoxRuntime> {
+        let value = if let Some(expr) = stmt.value() {
+            self.evaluate(expr)?
+        } else {
+            Value::Nil
+        };
+        Err(LoxRuntime::Return(RuntimeReturn::new(value)))
+    }
+
+    fn visit_var_stmt(&mut self, stmt: &Var) -> anyhow::Result<(), LoxRuntime> {
         let value = if let Some(initializer) = stmt.initializer() {
             self.evaluate(initializer)?
         } else {
@@ -244,7 +313,7 @@ impl stmt::Visitor<()> for Interpreter {
         Ok(())
     }
 
-    fn visit_while_stmt(&mut self, stmt: &While) -> anyhow::Result<(), RuntimeError> {
+    fn visit_while_stmt(&mut self, stmt: &While) -> anyhow::Result<(), LoxRuntime> {
         loop {
             let condition = self.evaluate(stmt.condition())?;
             if !self.is_truthy(&condition) {

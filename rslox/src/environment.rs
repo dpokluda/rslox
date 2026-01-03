@@ -1,4 +1,4 @@
-﻿use crate::runtime_error::RuntimeError;
+﻿use crate::runtime_error::{LoxRuntime, RuntimeError};
 use crate::token::Token;
 use std::rc::Rc;
 use std::cell::RefCell;
@@ -28,24 +28,24 @@ impl Environment {
         self.values.insert(name, value);
     }
 
-    pub fn get(&self, name: &Token) -> Result<crate::value::Value, RuntimeError> {
+    pub fn get(&self, name: &Token) -> Result<crate::value::Value, LoxRuntime> {
         if let Some(value) = self.values.get(name.lexeme()) {
             Ok(value.clone())
         } else if let Some(enclosing) = &self.enclosing {
             enclosing.borrow().get(name)
         } else {
-            Err(RuntimeError::new(name.clone(), format!("Undefined variable '{}'.", name.lexeme())))
+            Err(LoxRuntime::Error(RuntimeError::new(name.clone(), format!("Undefined variable '{}'.", name.lexeme()))))
         }
     }
 
-    pub fn assign(&mut self, name: &Token, value: crate::value::Value) -> Result<(), RuntimeError> {
+    pub fn assign(&mut self, name: &Token, value: crate::value::Value) -> Result<(), LoxRuntime> {
         if self.values.contains_key(name.lexeme()) {
             self.values.insert(name.lexeme().to_string(), value);
             Ok(())
         } else if let Some(enclosing) = &self.enclosing {
             enclosing.borrow_mut().assign(name, value)
         } else {
-            Err(RuntimeError::new(name.clone(), format!("Undefined variable '{}'.", name.lexeme())))
+            Err(LoxRuntime::Error(RuntimeError::new(name.clone(), format!("Undefined variable '{}'.", name.lexeme()))))
         }
     }
 }

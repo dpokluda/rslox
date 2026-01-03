@@ -5,15 +5,18 @@ var c = "global c";
     var a = "outer a";
     var b = "outer b";
 
-    fun inner() {
+    {
         var a = "inner a";
         print a; // Should print "inner a"
         print b; // Should print "outer b"
         print c; // Should print "global c"
     }
 
-    inner();
     print a; // Should print "outer a"
     print b; // Should print "outer b"
     print c; // Should print "global c"
 }
+
+print a; // Should print "global a"
+print b; // Should print "global b"
+print c; // Should print "global c"

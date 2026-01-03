@@ -8,12 +8,14 @@ mod literal;
 mod parser;
 mod expr;
 mod stmt;
-mod ast_printer;
 mod interpreter;
 mod value;
 mod parse_error;
 mod runtime_error;
 mod environment;
+mod lox_callable;
+mod lox_clock;
+mod lox_function;
 
 use clap::{CommandFactory, Parser};
 use anyhow::Result;
