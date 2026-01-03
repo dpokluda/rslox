@@ -270,7 +270,10 @@ impl stmt::Visitor<()> for Interpreter {
     }
 
     fn visit_function_stmt(&mut self, stmt: &Function) -> anyhow::Result<(), LoxRuntime> {
-        let function = crate::lox_function::LoxFunction::new(Box::new(stmt.clone()));
+        let function = crate::lox_function::LoxFunction::new(
+            Box::new(stmt.clone()),
+            self.environment.clone(),
+        );
         self.environment.borrow_mut().define(
             stmt.name().lexeme().to_string(),
             Value::LoxCallable(Rc::new(function)),
