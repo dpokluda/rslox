@@ -54,11 +54,9 @@ impl Parser {
             self.if_statement()
         } else if self.match_token(&[TokenType::Print]) {
             self.print_statement()
-        }
-        else if self.match_token(&[TokenType::Return]) {
+        } else if self.match_token(&[TokenType::Return]) {
             self.return_statement()
-        }
-        else if self.match_token(&[TokenType::While]) {
+        } else if self.match_token(&[TokenType::While]) {
             self.while_statement()
         } else if self.match_token(&[TokenType::LeftBrace]) {
             Ok(Stmt::Block(Block::new(self.block()?)))
@@ -375,28 +373,8 @@ impl Parser {
         Err(self.error(self.peek(), "Expect expression."))
     }
 
-    fn consume(&mut self, token_type: TokenType, message: &str) -> Result<&Token, ParseError> {
-        if self.check(&token_type) {
-            return Ok(self.advance());
-        }
-
-        Err(self.error(self.peek(), message))
-    }
-
-    fn error(&self, token: &Token, message: &str) -> ParseError {
-        let parse_error = ParseError::new(token.clone(), message.to_string());
-        lox::Lox::parse_error(&parse_error);
-        parse_error
-    }
-
-    fn match_token(&mut self, types: &[TokenType]) -> bool {
-        for token_type in types {
-            if self.check(token_type) {
-                self.advance();
-                return true;
-            }
-        }
-        false
+    fn peek(&self) -> &Token {
+        &self.tokens[self.current]
     }
 
     fn check(&self, token_type: &TokenType) -> bool {
@@ -404,6 +382,10 @@ impl Parser {
             return false;
         }
         &self.peek().token_type() == &token_type
+    }
+
+    fn previous(&self) -> &Token {
+        &self.tokens[self.current - 1]
     }
 
     fn advance(&mut self) -> &Token {
@@ -417,12 +399,28 @@ impl Parser {
         self.peek().token_type() == &TokenType::Eof
     }
 
-    fn peek(&self) -> &Token {
-        &self.tokens[self.current]
+    fn consume(&mut self, token_type: TokenType, message: &str) -> Result<&Token, ParseError> {
+        if self.check(&token_type) {
+            return Ok(self.advance());
+        }
+
+        Err(self.error(self.peek(), message))
     }
 
-    fn previous(&self) -> &Token {
-        &self.tokens[self.current - 1]
+    fn match_token(&mut self, types: &[TokenType]) -> bool {
+        for token_type in types {
+            if self.check(token_type) {
+                self.advance();
+                return true;
+            }
+        }
+        false
+    }
+    
+    fn error(&self, token: &Token, message: &str) -> ParseError {
+        let parse_error = ParseError::new(token.clone(), message.to_string());
+        lox::Lox::parse_error(&parse_error);
+        parse_error
     }
 
     fn synchronize(&mut self) {

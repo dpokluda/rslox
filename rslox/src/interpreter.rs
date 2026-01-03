@@ -5,16 +5,20 @@ use crate::stmt::{Block, Expression, Function, If, Print, Return, Stmt, Var, Whi
 use crate::value::Value;
 use std::rc::Rc;
 use std::cell::RefCell;
+use crate::environment::Environment;
+use crate::literal::LiteralValue;
+use crate::lox::Lox;
+use crate::token::{Token, TokenType};
 
 pub struct Interpreter {
-    environment: Rc<RefCell<crate::environment::Environment>>,
-    global: Rc<RefCell<crate::environment::Environment>>,
+    environment: Rc<RefCell<Environment>>,
+    global: Rc<RefCell<Environment>>,
 
 }
 
 impl Interpreter {
     pub fn new() -> Self {
-        let global = Rc::new(RefCell::new(crate::environment::Environment::new()));
+        let global = Rc::new(RefCell::new(Environment::new()));
 
         global.borrow_mut().define(
             "clock".to_string(),
@@ -27,7 +31,7 @@ impl Interpreter {
         }
     }
 
-    pub fn globals(&self) -> Rc<RefCell<crate::environment::Environment>> {
+    pub fn globals(&self) -> Rc<RefCell<Environment>> {
         Rc::clone(&self.global)
     }
 
@@ -38,7 +42,7 @@ impl Interpreter {
                 Err(e) => {
                     match e {
                         LoxRuntime::Error(runtime_error) => {
-                            crate::lox::Lox::runtime_error(&runtime_error);
+                            Lox::runtime_error(&runtime_error);
                         },
                         LoxRuntime::Return(_) => {
                             // This should never happen at the top level.
@@ -54,11 +58,11 @@ impl Interpreter {
         expr.accept(self)
     }
 
-    fn execute(&mut self, stmt: &stmt::Stmt) -> Result<(), LoxRuntime> {
+    fn execute(&mut self, stmt: &Stmt) -> Result<(), LoxRuntime> {
         stmt.accept(self)
     }
 
-    pub fn execute_block(&mut self, statements: &Vec<Box<stmt::Stmt>>, environment: Rc<RefCell<crate::environment::Environment>>) -> Result<(), LoxRuntime> {
+    pub fn execute_block(&mut self, statements: &Vec<Box<Stmt>>, environment: Rc<RefCell<Environment>>) -> Result<(), LoxRuntime> {
         let previous = Rc::clone(&self.environment);
         self.environment = environment;
         
@@ -92,7 +96,7 @@ impl Interpreter {
         }
     }
 
-    fn check_number_operand(&self, operator: &crate::token::Token, operand: &Value) -> Result<f64, LoxRuntime> {
+    fn check_number_operand(&self, operator: &Token, operand: &Value) -> Result<f64, LoxRuntime> {
         if let Value::Number(n) = operand {
             Ok(*n)
         } else {
@@ -115,7 +119,7 @@ impl expr::Visitor<Value> for Interpreter {
         let left = self.evaluate(binary.left())?;
         let right = self.evaluate(binary.right())?;
         match binary.operator().token_type() {
-            crate::token::TokenType::Plus => {
+            TokenType::Plus => {
                 match (left, right) {
                     (Value::Number(l), Value::Number(r)) => Ok(Value::Number(l + r)),
                     (Value::String(l), Value::String(r)) => Ok(Value::String(l + &r)),
@@ -125,45 +129,45 @@ impl expr::Visitor<Value> for Interpreter {
                     ))),
                 }
             },
-            crate::token::TokenType::Minus => {
+            TokenType::Minus => {
                 let l = self.check_number_operand(binary.operator(), &left)?;
                 let r = self.check_number_operand(binary.operator(), &right)?;
                 Ok(Value::Number(l - r))
             },
-            crate::token::TokenType::Star => {
+            TokenType::Star => {
                 let l = self.check_number_operand(binary.operator(), &left)?;
                 let r = self.check_number_operand(binary.operator(), &right)?;
                 Ok(Value::Number(l * r))
             },
-            crate::token::TokenType::Slash => {
+            TokenType::Slash => {
                 let l = self.check_number_operand(binary.operator(), &left)?;
                 let r = self.check_number_operand(binary.operator(), &right)?;
                 Ok(Value::Number(l / r))
             },
-            crate::token::TokenType::Greater => {
+            TokenType::Greater => {
                 let l = self.check_number_operand(binary.operator(), &left)?;
                 let r = self.check_number_operand(binary.operator(), &right)?;
                 Ok(Value::Boolean(l > r))
             },
-            crate::token::TokenType::GreaterEqual => {
+            TokenType::GreaterEqual => {
                 let l = self.check_number_operand(binary.operator(), &left)?;
                 let r = self.check_number_operand(binary.operator(), &right)?;
                 Ok(Value::Boolean(l >= r))
             },
-            crate::token::TokenType::Less => {
+            TokenType::Less => {
                 let l = self.check_number_operand(binary.operator(), &left)?;
                 let r = self.check_number_operand(binary.operator(), &right)?;
                 Ok(Value::Boolean(l < r))
             },
-            crate::token::TokenType::LessEqual => {
+            TokenType::LessEqual => {
                 let l = self.check_number_operand(binary.operator(), &left)?;
                 let r = self.check_number_operand(binary.operator(), &right)?;
                 Ok(Value::Boolean(l <= r))
             },
-            crate::token::TokenType::EqualEqual => {
+            TokenType::EqualEqual => {
                 Ok(Value::Boolean(self.is_equal(&left, &right)))
             },
-            crate::token::TokenType::BangEqual => {
+            TokenType::BangEqual => {
                 Ok(Value::Boolean(!self.is_equal(&left, &right)))
             },
             _ => Err(LoxRuntime::Error(RuntimeError::new(
@@ -204,24 +208,24 @@ impl expr::Visitor<Value> for Interpreter {
 
     fn visit_literal_expr(&mut self, literal: &Literal) -> anyhow::Result<Value, LoxRuntime> {
         match &literal.value() {
-            crate::literal::LiteralValue::Number(n) => Ok(Value::Number(*n)),
-            crate::literal::LiteralValue::Boolean(b) => Ok(Value::Boolean(*b)),
-            crate::literal::LiteralValue::String(s) => Ok(Value::String(s.clone())),
-            crate::literal::LiteralValue::Nil => Ok(Value::Nil),
+            LiteralValue::Number(n) => Ok(Value::Number(*n)),
+            LiteralValue::Boolean(b) => Ok(Value::Boolean(*b)),
+            LiteralValue::String(s) => Ok(Value::String(s.clone())),
+            LiteralValue::Nil => Ok(Value::Nil),
         }
     }
 
     fn visit_logical_expr(&mut self, expr: &Logical) -> anyhow::Result<Value, LoxRuntime> {
         let left = self.evaluate(expr.left())?;
         match expr.operator().token_type() {
-            crate::token::TokenType::Or => {
+            TokenType::Or => {
                 if self.is_truthy(&left) {
                     Ok(left)
                 } else {
                     self.evaluate(expr.right())
                 }
             },
-            crate::token::TokenType::And => {
+            TokenType::And => {
                 if !self.is_truthy(&left) {
                     Ok(left)
                 } else {
@@ -238,11 +242,11 @@ impl expr::Visitor<Value> for Interpreter {
     fn visit_unary_expr(&mut self, unary: &Unary) -> anyhow::Result<Value, LoxRuntime> {
         let right = self.evaluate(unary.right())?;
         match unary.operator().token_type() {
-            crate::token::TokenType::Minus => {
+            TokenType::Minus => {
                 let n = self.check_number_operand(unary.operator(), &right)?;
                 Ok(Value::Number(-n))
             },
-            crate::token::TokenType::Bang => {
+            TokenType::Bang => {
                 Ok(Value::Boolean(!self.is_truthy(&right)))
             },
             _ => Err(LoxRuntime::Error(RuntimeError::new(
@@ -259,7 +263,7 @@ impl expr::Visitor<Value> for Interpreter {
 
 impl stmt::Visitor<()> for Interpreter {
     fn visit_block_stmt(&mut self, stmt: &Block) -> anyhow::Result<(), LoxRuntime> {
-        let new_environment = Rc::new(RefCell::new(crate::environment::Environment::from_enclosing(self.environment.clone())));
+        let new_environment = Rc::new(RefCell::new(Environment::from_enclosing(self.environment.clone())));
         self.execute_block(stmt.statements(), new_environment)?;
         Ok(())
     }
