@@ -203,10 +203,10 @@ fn main() -> Result<()> {
         vec![
             "Block      : Vec<Box<Stmt>> statements",
             // "Class      : Token name, Option<Box<Expr>> superclass, Vec<Box<Function>> methods",
-            "Expression : Box<Expr> statements",
+            "Expression : Box<Expr> expression",
             "Function   : Token name, Vec<Token> params, Vec<Box<Stmt>> body",
             "If         : Box<Expr> condition, Box<Stmt> then_branch, Option<Box<Stmt>> else_branch",
-            "Print      : Box<Expr> statements",
+            "Print      : Box<Expr> expression",
             "Return     : Token keyword, Option<Box<Expr>> value",
             "Var        : Token name, Option<Box<Expr>> initializer",
             "While      : Box<Expr> condition, Box<Stmt> body"
