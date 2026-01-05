@@ -25,18 +25,18 @@ impl Block {
 // Expression
 #[derive(Debug, Clone, Eq, Hash, PartialEq)]
 pub struct Expression {
-    statements: Box<Expr>,
+    expression: Box<Expr>,
 }
 
 impl Expression {
-    pub fn new(statements: Box<Expr>) -> Self {
+    pub fn new(expression: Box<Expr>) -> Self {
         Expression {
-            statements,
+            expression,
         }
     }
 
-    pub fn statements(&self) -> &Box<Expr> {
-        &self.statements
+    pub fn expression(&self) -> &Box<Expr> {
+        &self.expression
     }
 }
 
@@ -103,18 +103,18 @@ impl If {
 // Print
 #[derive(Debug, Clone, Eq, Hash, PartialEq)]
 pub struct Print {
-    statements: Box<Expr>,
+    expression: Box<Expr>,
 }
 
 impl Print {
-    pub fn new(statements: Box<Expr>) -> Self {
+    pub fn new(expression: Box<Expr>) -> Self {
         Print {
-            statements,
+            expression,
         }
     }
 
-    pub fn statements(&self) -> &Box<Expr> {
-        &self.statements
+    pub fn expression(&self) -> &Box<Expr> {
+        &self.expression
     }
 }
 

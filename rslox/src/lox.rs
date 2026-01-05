@@ -1,8 +1,11 @@
 use std::sync::atomic::{AtomicBool, Ordering};
 use crate::{cprint, cprintln, scanner};
 use anyhow::Result;
+use scanner::Scanner;
 use crate::interpreter::Interpreter;
 use crate::parse_error::ParseError;
+use crate::parser::Parser;
+use crate::resolver::Resolver;
 use crate::runtime_error::RuntimeError;
 
 pub struct Lox {
@@ -61,11 +64,18 @@ impl Lox {
     }
 
     fn run(&mut self, source: &str) -> anyhow::Result<()> {
-        let mut scanner = scanner::Scanner::new(source.to_string());
+        let mut scanner = Scanner::new(source.to_string());
         let tokens = scanner.scan_tokens();
 
-        let mut parser = crate::parser::Parser::new(tokens);
+        let mut parser = Parser::new(tokens);
         let statements = parser.parse();
+
+        if Lox::had_error() {
+            return Ok(());
+        }
+
+        let mut resolver = Resolver::new(&mut self.interpreter);
+        resolver.resolve(&statements.clone().unwrap()).unwrap();
 
         if Lox::had_error() {
             return Ok(());

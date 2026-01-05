@@ -16,6 +16,7 @@ mod environment;
 mod lox_callable;
 mod lox_clock;
 mod lox_function;
+mod resolver;
 
 use clap::{CommandFactory, Parser};
 use anyhow::Result;

@@ -16,14 +16,13 @@ impl Parser {
         Parser { tokens, current: 0 }
     }
 
-    pub fn parse(&mut self) -> Result<Vec<Stmt>, ParseError> {
+    pub fn parse(&mut self) -> Result<Vec<Box<Stmt>>, ParseError> {
         let mut statements = vec![];
 
         while !self.is_at_end() {
-            let stmt = self.declaration()?;
-            statements.push(stmt);
+            let decl = self.declaration()?;
+            statements.push(Box::new(decl));
         }
-
         Ok(statements)
     }
 

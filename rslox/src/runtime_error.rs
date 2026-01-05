@@ -1,5 +1,6 @@
 use crate::token::Token;
 
+#[derive(Debug, Clone)]
 pub enum LoxRuntime {
     Error(RuntimeError),
     Return(RuntimeReturn)

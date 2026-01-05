@@ -5,15 +5,17 @@ use crate::stmt::{Block, Expression, Function, If, Print, Return, Stmt, Var, Whi
 use crate::value::Value;
 use std::rc::Rc;
 use std::cell::RefCell;
+use std::collections::HashMap;
 use crate::environment::Environment;
 use crate::literal::LiteralValue;
 use crate::lox::Lox;
 use crate::token::{Token, TokenType};
 
+#[derive(Clone)]
 pub struct Interpreter {
     environment: Rc<RefCell<Environment>>,
     global: Rc<RefCell<Environment>>,
-
+    locals: HashMap<Expr, usize>,
 }
 
 impl Interpreter {
@@ -28,6 +30,7 @@ impl Interpreter {
         Interpreter {
             environment: global.clone(),
             global,
+            locals: HashMap::new(),
         }
     }
 
@@ -35,7 +38,7 @@ impl Interpreter {
         Rc::clone(&self.global)
     }
 
-    pub fn interpret(&mut self, statements: &Vec<Stmt>) {
+    pub fn interpret(&mut self, statements: &Vec<Box<Stmt>>) {
         for statement in statements {
             match self.execute(&statement) {
                 Ok(_) => {},
@@ -62,6 +65,10 @@ impl Interpreter {
         stmt.accept(self)
     }
 
+    pub fn resolve(&mut self, expr: &Expr, depth: usize) {
+        self.locals.insert(expr.clone(), depth);
+    }
+
     pub fn execute_block(&mut self, statements: &Vec<Box<Stmt>>, environment: Rc<RefCell<Environment>>) -> Result<(), LoxRuntime> {
         let previous = Rc::clone(&self.environment);
         self.environment = environment;
@@ -75,6 +82,14 @@ impl Interpreter {
 
         self.environment = previous;
         result
+    }
+
+    fn lookup_variable(&self, name: &Token, expr: &Expr) -> Result<Value, LoxRuntime> {
+        if let Some(distance) = self.locals.get(expr) {
+            self.environment.borrow().get_at(*distance, name.lexeme())
+        } else {
+            self.global.borrow().get(name)
+        }
     }
 
     fn is_truthy(&self, value: &Value) -> bool {
@@ -111,7 +126,11 @@ impl Interpreter {
 impl expr::Visitor<Value> for Interpreter {
     fn visit_assign_expr(&mut self, expr: &Assign) -> anyhow::Result<Value, LoxRuntime> {
         let value = self.evaluate(expr.value())?;
-        self.environment.borrow_mut().assign(expr.name(), value.clone())?;
+        if let Some(distance) = self.locals.get(&expr::Expr::Assign(expr.clone())) {
+            self.environment.borrow_mut().assign_at(*distance, expr.name(), value.clone())?;
+        } else {
+            self.global.borrow_mut().assign(expr.name(), value.clone())?;
+        }
         Ok(value)
     }
 
@@ -257,7 +276,7 @@ impl expr::Visitor<Value> for Interpreter {
     }
 
     fn visit_variable_expr(&mut self, expr: &Variable) -> anyhow::Result<Value, LoxRuntime> {
-        self.environment.borrow().get(expr.name())
+        self.lookup_variable(expr.name(), &expr::Expr::Variable(expr.clone()))
     }
 }
 
@@ -269,7 +288,7 @@ impl stmt::Visitor<()> for Interpreter {
     }
 
     fn visit_expression_stmt(&mut self, stmt: &Expression) -> anyhow::Result<(), LoxRuntime> {
-        self.evaluate(stmt.statements())?;
+        self.evaluate(stmt.expression())?;
         Ok(())
     }
 
@@ -296,7 +315,7 @@ impl stmt::Visitor<()> for Interpreter {
     }
 
     fn visit_print_stmt(&mut self, stmt: &Print) -> anyhow::Result<(), LoxRuntime> {
-        let value = self.evaluate(stmt.statements())?;
+        let value = self.evaluate(stmt.expression())?;
         println!("{}", value);
         Ok(())
     }
