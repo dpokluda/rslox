@@ -1,9 +1,9 @@
 use std::collections::HashMap;
 use crate::{expr, stmt};
-use crate::expr::{Assign, Binary, Call, Grouping, Literal, Logical, Unary, Variable};
+use crate::expr::{Assign, Binary, Call, Get, Grouping, Literal, Logical, Set, Unary, Variable};
 use crate::interpreter::Interpreter;
 use crate::runtime_error::{LoxRuntime, RuntimeError};
-use crate::stmt::{Block, Expression, Function, If, Print, Return, Stmt, Var, While};
+use crate::stmt::{Block, Class, Expression, Function, If, Print, Return, Stmt, Var, While};
 use crate::token::Token;
 
 pub struct Resolver<'a> {
@@ -118,6 +118,11 @@ impl<'a> expr::Visitor<()> for Resolver<'a> {
         Ok(())
     }
 
+    fn visit_get_expr(&mut self, expr: &Get) -> anyhow::Result<(), LoxRuntime> {
+        self.resolve_expr(expr.object())?;
+        Ok(())
+    }
+
     fn visit_grouping_expr(&mut self, expr: &Grouping) -> anyhow::Result<(), LoxRuntime> {
         self.resolve_expr(expr.expression())?;
         Ok(())
@@ -130,6 +135,12 @@ impl<'a> expr::Visitor<()> for Resolver<'a> {
     fn visit_logical_expr(&mut self, expr: &Logical) -> anyhow::Result<(), LoxRuntime> {
         self.resolve_expr(expr.left())?;
         self.resolve_expr(expr.right())?;
+        Ok(())
+    }
+
+    fn visit_set_expr(&mut self, expr: &Set) -> anyhow::Result<(), LoxRuntime> {
+        self.resolve_expr(expr.value())?;
+        self.resolve_expr(expr.object())?;
         Ok(())
     }
 
@@ -158,6 +169,12 @@ impl<'a> stmt::Visitor<()> for Resolver<'a> {
         self.begin_scope();
         self.resolve(stmt.statements())?;
         self.end_scope();
+        Ok(())
+    }
+
+    fn visit_class_stmt(&mut self, stmt: &Class) -> anyhow::Result<(), LoxRuntime> {
+        self.declare(stmt.name())?;
+        self.define(stmt.name());
         Ok(())
     }
 

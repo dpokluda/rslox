@@ -1,7 +1,7 @@
-use crate::expr::{Expr, Binary, Grouping, Literal, Unary, Variable, Assign, Logical, Call};
+use crate::expr::{Expr, Binary, Grouping, Literal, Unary, Variable, Assign, Logical, Call, Get, Set};
 use crate::{expr, stmt};
 use crate::runtime_error::{LoxRuntime, RuntimeError, RuntimeReturn};
-use crate::stmt::{Block, Expression, Function, If, Print, Return, Stmt, Var, While};
+use crate::stmt::{Block, Class, Expression, Function, If, Print, Return, Stmt, Var, While};
 use crate::value::Value;
 use std::rc::Rc;
 use std::cell::RefCell;
@@ -221,6 +221,19 @@ impl expr::Visitor<Value> for Interpreter {
         }
     }
 
+    fn visit_get_expr(&mut self, expr: &Get) -> anyhow::Result<Value, LoxRuntime> {
+        let object = self.evaluate(expr.object())?;
+        match object {
+            Value::LoxInstance(instance) => {
+                instance.borrow().get(expr.name())
+            },
+            _ => Err(LoxRuntime::Error(RuntimeError::new(
+                expr.name().clone(),
+                "Only instances have properties.".to_string(),
+            ))),
+        }
+    }
+
     fn visit_grouping_expr(&mut self, grouping: &Grouping) -> anyhow::Result<Value, LoxRuntime> {
         self.evaluate(grouping.expression())
     }
@@ -258,6 +271,21 @@ impl expr::Visitor<Value> for Interpreter {
         }
     }
 
+    fn visit_set_expr(&mut self, expr: &Set) -> anyhow::Result<Value, LoxRuntime> {
+        let object = self.evaluate(expr.object())?;
+        match object {
+            Value::LoxInstance(instance) => {
+                let value = self.evaluate(expr.value())?;
+                instance.borrow_mut().set(expr.name(), value.clone());
+                Ok(value)
+            },
+            _ => Err(LoxRuntime::Error(RuntimeError::new(
+                expr.name().clone(),
+                "Only instances have fields.".to_string(),
+            ))),
+        }
+    }
+
     fn visit_unary_expr(&mut self, unary: &Unary) -> anyhow::Result<Value, LoxRuntime> {
         let right = self.evaluate(unary.right())?;
         match unary.operator().token_type() {
@@ -284,6 +312,13 @@ impl stmt::Visitor<()> for Interpreter {
     fn visit_block_stmt(&mut self, stmt: &Block) -> anyhow::Result<(), LoxRuntime> {
         let new_environment = Rc::new(RefCell::new(Environment::from_enclosing(self.environment.clone())));
         self.execute_block(stmt.statements(), new_environment)?;
+        Ok(())
+    }
+
+    fn visit_class_stmt(&mut self, stmt: &Class) -> anyhow::Result<(), LoxRuntime> {
+        self.environment.borrow_mut().define(stmt.name().lexeme().to_string(), Value::Nil);
+        let class_ = crate::lox_class::LoxClass::new(stmt.name().lexeme().to_string());
+        self.environment.borrow_mut().assign(stmt.name(), Value::LoxClass(Rc::new(class_)))?;
         Ok(())
     }
 

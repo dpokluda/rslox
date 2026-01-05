@@ -22,6 +22,30 @@ impl Block {
     }
 }
 
+// Class
+#[derive(Debug, Clone, Eq, Hash, PartialEq)]
+pub struct Class {
+    name: Token,
+    methods: Vec<Box<Function>>,
+}
+
+impl Class {
+    pub fn new(name: Token, methods: Vec<Box<Function>>) -> Self {
+        Class {
+            name,
+            methods,
+        }
+    }
+
+    pub fn name(&self) -> &Token {
+        &self.name
+    }
+
+    pub fn methods(&self) -> &Vec<Box<Function>> {
+        &self.methods
+    }
+}
+
 // Expression
 #[derive(Debug, Clone, Eq, Hash, PartialEq)]
 pub struct Expression {
@@ -194,6 +218,7 @@ impl While {
 #[derive(Debug, Clone, Hash, Eq, PartialEq)]
 pub enum Stmt {
     Block(Block),
+    Class(Class),
     Expression(Expression),
     Function(Function),
     If(If),
@@ -206,6 +231,7 @@ pub enum Stmt {
 // Visitor trait
 pub trait Visitor<T> {
     fn visit_block_stmt(&mut self, stmt: &Block) -> Result<T, LoxRuntime>;
+    fn visit_class_stmt(&mut self, stmt: &Class) -> Result<T, LoxRuntime>;
     fn visit_expression_stmt(&mut self, stmt: &Expression) -> Result<T, LoxRuntime>;
     fn visit_function_stmt(&mut self, stmt: &Function) -> Result<T, LoxRuntime>;
     fn visit_if_stmt(&mut self, stmt: &If) -> Result<T, LoxRuntime>;
@@ -220,6 +246,7 @@ impl Stmt {
     pub fn accept<T>(&self, visitor: &mut dyn Visitor<T>) -> Result<T, LoxRuntime> {
         match self {
             Stmt::Block(stmt) => visitor.visit_block_stmt(stmt),
+            Stmt::Class(stmt) => visitor.visit_class_stmt(stmt),
             Stmt::Expression(stmt) => visitor.visit_expression_stmt(stmt),
             Stmt::Function(stmt) => visitor.visit_function_stmt(stmt),
             Stmt::If(stmt) => visitor.visit_if_stmt(stmt),

@@ -88,6 +88,30 @@ impl Call {
     }
 }
 
+// Get
+#[derive(Debug, Clone, Eq, Hash, PartialEq)]
+pub struct Get {
+    object: Box<Expr>,
+    name: Token,
+}
+
+impl Get {
+    pub fn new(object: Box<Expr>, name: Token) -> Self {
+        Get {
+            object,
+            name,
+        }
+    }
+
+    pub fn object(&self) -> &Box<Expr> {
+        &self.object
+    }
+
+    pub fn name(&self) -> &Token {
+        &self.name
+    }
+}
+
 // Grouping
 #[derive(Debug, Clone, Eq, Hash, PartialEq)]
 pub struct Grouping {
@@ -154,6 +178,36 @@ impl Logical {
     }
 }
 
+// Set
+#[derive(Debug, Clone, Eq, Hash, PartialEq)]
+pub struct Set {
+    object: Box<Expr>,
+    name: Token,
+    value: Box<Expr>,
+}
+
+impl Set {
+    pub fn new(object: Box<Expr>, name: Token, value: Box<Expr>) -> Self {
+        Set {
+            object,
+            name,
+            value,
+        }
+    }
+
+    pub fn object(&self) -> &Box<Expr> {
+        &self.object
+    }
+
+    pub fn name(&self) -> &Token {
+        &self.name
+    }
+
+    pub fn value(&self) -> &Box<Expr> {
+        &self.value
+    }
+}
+
 // Unary
 #[derive(Debug, Clone, Eq, Hash, PartialEq)]
 pub struct Unary {
@@ -202,9 +256,11 @@ pub enum Expr {
     Assign(Assign),
     Binary(Binary),
     Call(Call),
+    Get(Get),
     Grouping(Grouping),
     Literal(Literal),
     Logical(Logical),
+    Set(Set),
     Unary(Unary),
     Variable(Variable),
 }
@@ -214,9 +270,11 @@ pub trait Visitor<T> {
     fn visit_assign_expr(&mut self, expr: &Assign) -> Result<T, LoxRuntime>;
     fn visit_binary_expr(&mut self, expr: &Binary) -> Result<T, LoxRuntime>;
     fn visit_call_expr(&mut self, expr: &Call) -> Result<T, LoxRuntime>;
+    fn visit_get_expr(&mut self, expr: &Get) -> Result<T, LoxRuntime>;
     fn visit_grouping_expr(&mut self, expr: &Grouping) -> Result<T, LoxRuntime>;
     fn visit_literal_expr(&mut self, expr: &Literal) -> Result<T, LoxRuntime>;
     fn visit_logical_expr(&mut self, expr: &Logical) -> Result<T, LoxRuntime>;
+    fn visit_set_expr(&mut self, expr: &Set) -> Result<T, LoxRuntime>;
     fn visit_unary_expr(&mut self, expr: &Unary) -> Result<T, LoxRuntime>;
     fn visit_variable_expr(&mut self, expr: &Variable) -> Result<T, LoxRuntime>;
 }
@@ -228,9 +286,11 @@ impl Expr {
             Expr::Assign(expr) => visitor.visit_assign_expr(expr),
             Expr::Binary(expr) => visitor.visit_binary_expr(expr),
             Expr::Call(expr) => visitor.visit_call_expr(expr),
+            Expr::Get(expr) => visitor.visit_get_expr(expr),
             Expr::Grouping(expr) => visitor.visit_grouping_expr(expr),
             Expr::Literal(expr) => visitor.visit_literal_expr(expr),
             Expr::Logical(expr) => visitor.visit_logical_expr(expr),
+            Expr::Set(expr) => visitor.visit_set_expr(expr),
             Expr::Unary(expr) => visitor.visit_unary_expr(expr),
             Expr::Variable(expr) => visitor.visit_variable_expr(expr),
         }

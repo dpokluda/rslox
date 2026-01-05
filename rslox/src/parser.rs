@@ -1,9 +1,10 @@
+use crate::stmt::Stmt;
 use crate::token::Token;
 use crate::token_type::TokenType;
 use crate::literal::LiteralValue;
 use crate::expr::*;
-use crate::stmt::*;
 use crate::lox;
+use crate::stmt::*;
 use crate::parse_error::ParseError;
 
 pub struct Parser {
@@ -31,7 +32,9 @@ impl Parser {
     }
 
     fn declaration(&mut self) -> Result<Stmt, ParseError> {
-        let result = if self.match_token(&[TokenType::Fun]) {
+        let result = if self.match_token(&[TokenType::Class]) {
+            return self.class_declaration();
+        } else if self.match_token(&[TokenType::Fun]) {
             self.function("function")
         } else if self.match_token(&[TokenType::Var]) {
             self.var_declaration()
@@ -44,6 +47,23 @@ impl Parser {
         }
 
         result
+    }
+
+    fn class_declaration(&mut self) -> Result<Stmt, ParseError> {
+        let name = self.consume(TokenType::Identifier, "Expect class name.")?.clone();
+        self.consume(TokenType::LeftBrace, "Expect '{' before class body.")?;
+
+        let mut methods = vec![];
+        while !self.check(&TokenType::RightBrace) && !self.is_at_end() {
+            let stmt = self.function("method")?;
+            match stmt {
+                Stmt::Function(func) => methods.push(Box::new(func)),
+                _ => return Err(self.error(self.previous(), "Expect method declaration.")),
+            }
+        }
+
+        self.consume(TokenType::RightBrace, "Expect '}' after class body.")?;
+        Ok(Stmt::Class(Class::new(name, methods)))
     }
 
     fn statement(&mut self) -> Result<Stmt, ParseError> {
@@ -218,6 +238,9 @@ impl Parser {
                 let name = var.name().clone();
                 return Ok(Expr::Assign(Assign::new(name, Box::new(value))));
             }
+            else if let Expr::Get(get) = expr {
+                return Ok(Expr::Set(Set::new(get.object().clone(), get.name().clone(), Box::new(value))));
+            }
 
             return Err(self.error(&equals, "Invalid assignment target."));
         }
@@ -309,7 +332,11 @@ impl Parser {
         loop {
             if self.match_token(&[TokenType::LeftParen]) {
                 expr = self.finish_call(expr)?;
-            } else {
+            } else if self.match_token(&[TokenType::Dot]) {
+                let name = self.consume(TokenType::Identifier, "Expect property name after '.'.")?.clone();
+                expr = Expr::Get(Get::new(Box::new(expr), name));
+            }
+            else {
                 break;
             }
         }
