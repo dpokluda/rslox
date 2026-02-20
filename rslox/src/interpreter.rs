@@ -1,5 +1,6 @@
 use crate::expr::{Expr, Binary, Grouping, Literal, Unary, Variable, Assign, Logical, Call, Get, Set};
 use crate::{expr, stmt};
+use crate::lox_callable::LoxCallable;
 use crate::runtime_error::{LoxRuntime, RuntimeError, RuntimeReturn};
 use crate::stmt::{Block, Class, Expression, Function, If, Print, Return, Stmt, Var, While};
 use crate::value::Value;
@@ -213,6 +214,15 @@ impl expr::Visitor<Value> for Interpreter {
                     )));
                 }
                 function.call(self, arguments)
+            },
+            Value::LoxClass(class) => {
+                if arguments.len() != class.arity() {
+                    return Err(LoxRuntime::Error(RuntimeError::new(
+                        expr.paren().clone(),
+                        format!("Expected {} arguments but got {}.", class.arity(), arguments.len()),
+                    )));
+                }
+                class.call(self, arguments)
             },
             _ => Err(LoxRuntime::Error(RuntimeError::new(
                 expr.paren().clone(),
