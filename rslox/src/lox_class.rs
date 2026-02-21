@@ -1,25 +1,38 @@
 use std::cell::RefCell;
+use std::collections::HashMap;
 use std::rc::Rc;
 use crate::interpreter::Interpreter;
 use crate::lox_callable::LoxCallable;
+use crate::lox_function::LoxFunction;
 use crate::lox_instance::LoxInstance;
 use crate::runtime_error::LoxRuntime;
+use crate::token::Token;
 use crate::value::Value;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct LoxClass {
     name: String,
+    methods: HashMap<String, LoxFunction>,
 }
 
 impl LoxClass {
-    pub fn new(name: String) -> Self {
+    pub fn new(name: String, methods: HashMap<String, LoxFunction>) -> Self {
         LoxClass {
             name,
+            methods,
         }
     }
 
     pub fn name(&self) -> &String {
         &self.name
+    }
+
+    pub fn find_method(&self, name: &str) -> Option<LoxFunction> {
+        if let Some(method) = self.methods.get(name) {
+            Some(method.clone())
+        } else {
+            None
+        }
     }
 }
 

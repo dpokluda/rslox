@@ -63,7 +63,7 @@ impl Parser {
         }
 
         self.consume(TokenType::RightBrace, "Expect '}' after class body.")?;
-        Ok(Stmt::Class(Class::new(name, methods)))
+        Ok(Stmt::Class(Class::new(name, None, methods)))
     }
 
     fn statement(&mut self) -> Result<Stmt, ParseError> {

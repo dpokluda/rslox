@@ -202,8 +202,7 @@ fn main() -> Result<()> {
         &args.output,
         vec![
             "Block      : Vec<Box<Stmt>> statements",
-            // "Class      : Token name, Option<Box<Expr>> superclass, Vec<Box<Function>> methods",
-            "Class      : Token name, Vec<Box<Function>> methods",
+            "Class      : Token name, Option<Box<Expr>> superclass, Vec<Box<Function>> methods",
             "Expression : Box<Expr> expression",
             "Function   : Token name, Vec<Token> params, Vec<Box<Stmt>> body",
             "If         : Box<Expr> condition, Box<Stmt> then_branch, Option<Box<Stmt>> else_branch",

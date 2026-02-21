@@ -1,3 +1,4 @@
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 use crate::lox_class::LoxClass;
@@ -26,7 +27,12 @@ impl LoxInstance {
     pub fn get(&self, name: &Token) -> Result<Value, LoxRuntime> {
         if let Some(value) = self.fields.get(name.lexeme()) {
             Ok(value.clone())
-        } else {
+        }
+        else if let Some(method) = self.class_.find_method(name.lexeme()) {
+            let bound_method = method.bind(Rc::new(RefCell::new(self.clone())));
+            Ok(Value::LoxCallable(Rc::new(bound_method)))
+        }
+        else {
             Err(LoxRuntime::Error(RuntimeError::new(name.clone(), format!("Undefined property '{}'.", name.lexeme()))))
         }
     }

@@ -1,6 +1,8 @@
 ﻿use std::cell::RefCell;
 use std::rc::Rc;
+use lox_instance::LoxInstance;
 use crate::environment::Environment;
+use crate::lox_instance;
 use crate::runtime_error::LoxRuntime;
 use crate::stmt::Function;
 use crate::value::Value;
@@ -13,6 +15,15 @@ pub struct LoxFunction {
 impl LoxFunction {
     pub fn new(declaration: Box<Function>, closure: Rc<RefCell<Environment>>) -> Self {
         LoxFunction { declaration, closure }
+    }
+
+    pub fn bind(&self, instance: Rc<RefCell<LoxInstance>>) -> LoxFunction {
+        let mut environment = Environment::from_enclosing(self.closure.clone());
+        environment.define("this".to_string(), Value::LoxInstance(instance));
+        LoxFunction {
+            declaration: self.declaration.clone(),
+            closure: Rc::new(RefCell::new(environment)),
+        }
     }
 }
 
@@ -45,5 +56,20 @@ impl std::fmt::Debug for LoxFunction {
 impl std::fmt::Display for LoxFunction {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "<fn {}>", self.declaration.name().lexeme())
+    }
+}
+
+impl PartialEq for LoxFunction {
+    fn eq(&self, other: &Self) -> bool {
+        self.declaration.name() == other.declaration.name()
+    }
+}
+
+impl Clone for LoxFunction {
+    fn clone(&self) -> Self {
+        LoxFunction {
+            declaration: self.declaration.clone(),
+            closure: self.closure.clone(),
+        }
     }
 }

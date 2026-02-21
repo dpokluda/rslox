@@ -15,6 +15,7 @@ pub struct Resolver<'a> {
 #[derive(Clone, Copy, PartialEq)]
 enum FunctionType {
     None,
+    Method,
     Function,
 }
 

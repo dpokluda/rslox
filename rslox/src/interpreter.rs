@@ -10,6 +10,8 @@ use std::collections::HashMap;
 use crate::environment::Environment;
 use crate::literal::LiteralValue;
 use crate::lox::Lox;
+use crate::lox_class::LoxClass;
+use crate::lox_function::LoxFunction;
 use crate::token::{Token, TokenType};
 
 #[derive(Clone)]
@@ -327,7 +329,16 @@ impl stmt::Visitor<()> for Interpreter {
 
     fn visit_class_stmt(&mut self, stmt: &Class) -> anyhow::Result<(), LoxRuntime> {
         self.environment.borrow_mut().define(stmt.name().lexeme().to_string(), Value::Nil);
-        let class_ = crate::lox_class::LoxClass::new(stmt.name().lexeme().to_string());
+        let mut methods = HashMap::new();
+        for method in stmt.methods() {
+            let function = LoxFunction::new(
+                Box::new(method.as_ref().clone()),
+                self.environment.clone(),
+            );
+            methods.insert(method.name().lexeme().to_string(), function);
+        }
+
+        let class_ = LoxClass::new(stmt.name().lexeme().to_string(), methods);
         self.environment.borrow_mut().assign(stmt.name(), Value::LoxClass(Rc::new(class_)))?;
         Ok(())
     }
