@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use crate::{expr, stmt};
-use crate::expr::{Assign, Binary, Call, Get, Grouping, Literal, Logical, Set, Unary, Variable};
+use crate::expr::{Assign, Binary, Call, Get, Grouping, Literal, Logical, Set, This, Unary, Variable};
 use crate::interpreter::Interpreter;
 use crate::runtime_error::{LoxRuntime, RuntimeError};
 use crate::stmt::{Block, Class, Expression, Function, If, Print, Return, Stmt, Var, While};
@@ -10,13 +10,21 @@ pub struct Resolver<'a> {
     interpreter: &'a mut Interpreter,
     scopes: Vec<HashMap<String, bool>>,
     current_function: FunctionType,
+    current_class: ClassType,
 }
 
 #[derive(Clone, Copy, PartialEq)]
 enum FunctionType {
     None,
-    Method,
     Function,
+    Initializer,
+    Method,
+}
+
+#[derive(Clone, Copy, PartialEq)]
+enum ClassType {
+    None,
+    Class,
 }
 
 impl<'a> Resolver<'a> {
@@ -25,6 +33,7 @@ impl<'a> Resolver<'a> {
             interpreter,
             scopes: Vec::new(),
             current_function: FunctionType::None,
+            current_class: ClassType::None,
         }
     }
 
@@ -145,6 +154,18 @@ impl<'a> expr::Visitor<()> for Resolver<'a> {
         Ok(())
     }
 
+    fn visit_this_expr(&mut self, expr: &This) -> anyhow::Result<(), LoxRuntime> {
+        if self.current_class == ClassType::None {
+            return Err(LoxRuntime::Error(RuntimeError::new(
+                expr.keyword().clone(),
+                "Cannot use 'this' outside of a class.".to_string(),
+            )));
+        }
+
+        self.resolve_local(&expr::Expr::This(expr.clone()), expr.keyword());
+        Ok(())
+    }
+
     fn visit_unary_expr(&mut self, expr: &Unary) -> anyhow::Result<(), LoxRuntime> {
         self.resolve_expr(expr.right())?;
         Ok(())
@@ -174,8 +195,27 @@ impl<'a> stmt::Visitor<()> for Resolver<'a> {
     }
 
     fn visit_class_stmt(&mut self, stmt: &Class) -> anyhow::Result<(), LoxRuntime> {
+        let enclosing_class = self.current_class;
+        self.current_class = ClassType::Class;
+
         self.declare(stmt.name())?;
         self.define(stmt.name());
+
+        self.begin_scope();
+        self.scopes.last_mut().unwrap().insert("this".to_string(), true);
+
+        for method in stmt.methods() {
+            let declaration = if method.name().lexeme() == "init" {
+                FunctionType::Initializer
+            } else {
+                FunctionType::Method
+            };
+            self.resolve_function(method, declaration)?;
+        }
+
+        self.end_scope();
+        self.current_class = enclosing_class;
+
         Ok(())
     }
 
@@ -216,6 +256,13 @@ impl<'a> stmt::Visitor<()> for Resolver<'a> {
         }
         
         if let Some(value) = stmt.value() {
+            if self.current_function == FunctionType::Initializer {
+                return Err(LoxRuntime::Error(RuntimeError::new(
+                    stmt.keyword().clone(),
+                    "Cannot return a value from an initializer.".to_string(),
+                )));
+            }
+            
             self.resolve_expr(value)?;
         }
         Ok(())

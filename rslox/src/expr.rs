@@ -208,6 +208,24 @@ impl Set {
     }
 }
 
+// This
+#[derive(Debug, Clone, Eq, Hash, PartialEq)]
+pub struct This {
+    keyword: Token,
+}
+
+impl This {
+    pub fn new(keyword: Token) -> Self {
+        This {
+            keyword,
+        }
+    }
+
+    pub fn keyword(&self) -> &Token {
+        &self.keyword
+    }
+}
+
 // Unary
 #[derive(Debug, Clone, Eq, Hash, PartialEq)]
 pub struct Unary {
@@ -261,6 +279,7 @@ pub enum Expr {
     Literal(Literal),
     Logical(Logical),
     Set(Set),
+    This(This),
     Unary(Unary),
     Variable(Variable),
 }
@@ -275,6 +294,7 @@ pub trait Visitor<T> {
     fn visit_literal_expr(&mut self, expr: &Literal) -> Result<T, LoxRuntime>;
     fn visit_logical_expr(&mut self, expr: &Logical) -> Result<T, LoxRuntime>;
     fn visit_set_expr(&mut self, expr: &Set) -> Result<T, LoxRuntime>;
+    fn visit_this_expr(&mut self, expr: &This) -> Result<T, LoxRuntime>;
     fn visit_unary_expr(&mut self, expr: &Unary) -> Result<T, LoxRuntime>;
     fn visit_variable_expr(&mut self, expr: &Variable) -> Result<T, LoxRuntime>;
 }
@@ -291,6 +311,7 @@ impl Expr {
             Expr::Literal(expr) => visitor.visit_literal_expr(expr),
             Expr::Logical(expr) => visitor.visit_logical_expr(expr),
             Expr::Set(expr) => visitor.visit_set_expr(expr),
+            Expr::This(expr) => visitor.visit_this_expr(expr),
             Expr::Unary(expr) => visitor.visit_unary_expr(expr),
             Expr::Variable(expr) => visitor.visit_variable_expr(expr),
         }

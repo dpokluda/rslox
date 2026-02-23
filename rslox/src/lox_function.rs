@@ -10,11 +10,12 @@ use crate::value::Value;
 pub struct LoxFunction {
     declaration: Box<Function>,
     closure: Rc<RefCell<Environment>>,
+    is_initializer: bool,
 }
 
 impl LoxFunction {
-    pub fn new(declaration: Box<Function>, closure: Rc<RefCell<Environment>>) -> Self {
-        LoxFunction { declaration, closure }
+    pub fn new(declaration: Box<Function>, closure: Rc<RefCell<Environment>>, is_initializer: bool ) -> Self {
+        LoxFunction { declaration, closure, is_initializer }
     }
 
     pub fn bind(&self, instance: Rc<RefCell<LoxInstance>>) -> LoxFunction {
@@ -23,6 +24,7 @@ impl LoxFunction {
         LoxFunction {
             declaration: self.declaration.clone(),
             closure: Rc::new(RefCell::new(environment)),
+            is_initializer: self.is_initializer,
         }
     }
 }
@@ -38,10 +40,22 @@ impl crate::lox_callable::LoxCallable for LoxFunction {
         for (i, param) in self.declaration.params().iter().enumerate() {
             environment.borrow_mut().define(param.lexeme().clone(), arguments[i].clone());
         }
-
+        
         match interpreter.execute_block(&self.declaration.body(), environment) {
-            Ok(_) => Ok(Value::Nil),
-            Err(LoxRuntime::Return(return_value)) => Ok(return_value.value().clone()),
+            Ok(_) => {
+                if self.is_initializer {
+                    Ok(self.closure.borrow().get_at(0, "this").unwrap())
+                } else {
+                    Ok(Value::Nil)
+                }
+            },
+            Err(LoxRuntime::Return(return_value)) => {
+                if self.is_initializer {
+                    Ok(self.closure.borrow().get_at(0, "this").unwrap())
+                } else {
+                    Ok(return_value.value().clone())
+                }
+            },
             Err(err) => Err(err),
         }
     }
@@ -70,6 +84,7 @@ impl Clone for LoxFunction {
         LoxFunction {
             declaration: self.declaration.clone(),
             closure: self.closure.clone(),
+            is_initializer: self.is_initializer,
         }
     }
 }

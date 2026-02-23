@@ -1,4 +1,4 @@
-use crate::expr::{Expr, Binary, Grouping, Literal, Unary, Variable, Assign, Logical, Call, Get, Set};
+use crate::expr::{Expr, Binary, Grouping, Literal, Unary, Variable, Assign, Logical, Call, Get, Set, This};
 use crate::{expr, stmt};
 use crate::lox_callable::LoxCallable;
 use crate::runtime_error::{LoxRuntime, RuntimeError, RuntimeReturn};
@@ -298,6 +298,10 @@ impl expr::Visitor<Value> for Interpreter {
         }
     }
 
+    fn visit_this_expr(&mut self, expr: &This) -> anyhow::Result<Value, LoxRuntime> {
+        self.lookup_variable(expr.keyword(), &expr::Expr::This(expr.clone()))
+    }
+
     fn visit_unary_expr(&mut self, unary: &Unary) -> anyhow::Result<Value, LoxRuntime> {
         let right = self.evaluate(unary.right())?;
         match unary.operator().token_type() {
@@ -334,6 +338,7 @@ impl stmt::Visitor<()> for Interpreter {
             let function = LoxFunction::new(
                 Box::new(method.as_ref().clone()),
                 self.environment.clone(),
+                method.name().lexeme() == "init",
             );
             methods.insert(method.name().lexeme().to_string(), function);
         }
@@ -352,6 +357,7 @@ impl stmt::Visitor<()> for Interpreter {
         let function = crate::lox_function::LoxFunction::new(
             Box::new(stmt.clone()),
             self.environment.clone(),
+            false,
         );
         self.environment.borrow_mut().define(
             stmt.name().lexeme().to_string(),

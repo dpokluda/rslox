@@ -38,11 +38,21 @@ impl LoxClass {
 
 impl LoxCallable for LoxClass {
     fn arity(&self) -> usize {
-        0
+        let initializer = self.find_method("init");
+        if let Some(init) = initializer {
+            init.arity()
+        } else {
+            0
+        }
     }
 
     fn call(&self, interpreter: &mut Interpreter, arguments: Vec<Value>) -> Result<Value, LoxRuntime> {
         let instance = LoxInstance::new(Rc::new(self.clone()));
+        let initializer = self.find_method("init");
+        if let Some(init) = initializer {
+            init.bind(Rc::new(RefCell::new(instance.clone()))).call(interpreter, arguments)?;
+        }
+
         Ok(Value::LoxInstance(Rc::new(RefCell::new(instance))))
     }
 }

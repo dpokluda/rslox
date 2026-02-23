@@ -387,6 +387,9 @@ impl Parser {
             };
             return Ok(Expr::Literal(Literal::new(LiteralValue::String(value))));
         }
+        if self.match_token(&[TokenType::This]) {
+            return Ok(Expr::This(This::new(self.previous().clone())));
+        }
         if self.match_token(&[TokenType::Identifier]) {
             return Ok(Expr::Variable(Variable::new(self.previous().clone())));
         }
