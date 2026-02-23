@@ -187,7 +187,7 @@ fn main() -> Result<()> {
             "Logical  : Box<Expr> left, Token operator, Box<Expr> right",
             "Set      : Box<Expr> object, Token name, Box<Expr> value",
             // "Super    : Token keyword, Token method",
-            // "This     : Token keyword",
+            "This     : Token keyword",
             "Unary    : Token operator, Box<Expr> right",
             "Variable : Token name"
         ]);
