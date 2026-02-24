@@ -1,0 +1,6 @@
+var x = "before";
+
+class Base {}
+class Derived < Base {}
+
+print x;

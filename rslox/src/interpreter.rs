@@ -378,6 +378,8 @@ impl stmt::Visitor<()> for Interpreter {
 
         self.environment.borrow_mut().define(stmt.name().lexeme().to_string(), Value::Nil);
 
+        let enclosing_environment = self.environment.clone();
+
         if let Some(superclass_expr) = stmt.superclass() {
             if let Expr::Variable(_) = superclass_expr.as_ref() {
                 self.environment = Rc::new(RefCell::new(Environment::from_enclosing(self.environment.clone())));
@@ -393,6 +395,10 @@ impl stmt::Visitor<()> for Interpreter {
                 method.name().lexeme() == "init",
             );
             methods.insert(method.name().lexeme().to_string(), function);
+        }
+
+        if stmt.superclass().is_some() {
+            self.environment =  enclosing_environment;
         }
 
         let class_ = LoxClass::new(stmt.name().lexeme().to_string(), superclass, methods);

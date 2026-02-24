@@ -1,0 +1,8 @@
+var x = "before";
+
+fun test() {
+  x = "after";
+}
+
+test();
+print x;

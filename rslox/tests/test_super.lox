@@ -1,0 +1,15 @@
+class Base {
+  method() {
+    print "Base method";
+  }
+}
+
+class Derived < Base {
+  method() {
+    print "Derived method";
+    super.method();
+  }
+}
+
+var d = Derived();
+d.method();

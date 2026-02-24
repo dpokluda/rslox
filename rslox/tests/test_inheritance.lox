@@ -1,0 +1,14 @@
+class Base {
+  baseMethod() {
+    print "base";
+  }
+}
+
+class Derived < Base {
+  derivedMethod() {
+    print "derived";
+  }
+}
+
+var x = 10;
+print x;

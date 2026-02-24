@@ -23,7 +23,7 @@ impl Environment {
             enclosing: Some(enclosing),
         }
     }
-
+    
     pub fn define(&mut self, name: String, value: crate::value::Value) {
         self.values.insert(name, value);
     }

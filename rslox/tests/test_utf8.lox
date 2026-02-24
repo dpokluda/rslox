@@ -1,0 +1,2 @@
+var emoji = "😀";
+print emoji;
