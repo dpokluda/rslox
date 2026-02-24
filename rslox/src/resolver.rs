@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use crate::{expr, stmt};
-use crate::expr::{Assign, Binary, Call, Get, Grouping, Literal, Logical, Set, This, Unary, Variable};
+use crate::expr::{Assign, Binary, Call, Get, Grouping, Literal, Logical, Set, Super, This, Unary, Variable};
 use crate::interpreter::Interpreter;
 use crate::runtime_error::{LoxRuntime, RuntimeError};
 use crate::stmt::{Block, Class, Expression, Function, If, Print, Return, Stmt, Var, While};
@@ -25,6 +25,7 @@ enum FunctionType {
 enum ClassType {
     None,
     Class,
+    Subclass,
 }
 
 impl<'a> Resolver<'a> {
@@ -138,7 +139,8 @@ impl<'a> expr::Visitor<()> for Resolver<'a> {
         Ok(())
     }
 
-    fn visit_literal_expr(&mut self, expr: &Literal) -> anyhow::Result<(), LoxRuntime> {
+    fn visit_literal_expr(&mut self, _expr: &Literal) -> anyhow::Result<(), LoxRuntime>
+    {
         Ok(())
     }
 
@@ -151,6 +153,23 @@ impl<'a> expr::Visitor<()> for Resolver<'a> {
     fn visit_set_expr(&mut self, expr: &Set) -> anyhow::Result<(), LoxRuntime> {
         self.resolve_expr(expr.value())?;
         self.resolve_expr(expr.object())?;
+        Ok(())
+    }
+
+    fn visit_super_expr(&mut self, expr: &Super) -> anyhow::Result<(), LoxRuntime> {
+        if self.current_class == ClassType::None {
+            return Err(LoxRuntime::Error(RuntimeError::new(
+                expr.keyword().clone(),
+                "Cannot use 'super' outside of a class.".to_string(),
+            )));
+        } else if self.current_class != ClassType::Subclass {
+            return Err(LoxRuntime::Error(RuntimeError::new(
+                expr.keyword().clone(),
+                "Cannot use 'super' in a class with no superclass.".to_string(),
+            )));
+        }
+
+        self.resolve_local(&expr::Expr::Super(expr.clone()), expr.keyword());
         Ok(())
     }
 
@@ -201,6 +220,30 @@ impl<'a> stmt::Visitor<()> for Resolver<'a> {
         self.declare(stmt.name())?;
         self.define(stmt.name());
 
+        if let Some(expr) = stmt.superclass() {
+            if let expr::Expr::Variable(var) = expr.as_ref() {
+                self.current_class = ClassType::Subclass;
+                if var.name().lexeme() == stmt.name().lexeme() {
+                    return Err(LoxRuntime::Error(RuntimeError::new(
+                        var.name().clone(),
+                        "A class cannot inherit from itself.".to_string(),
+                    )));
+                }
+                self.resolve_expr(expr)?
+            }
+            else {
+                return Err(LoxRuntime::Error(RuntimeError::new(
+                    stmt.name().clone(),
+                    "Superclass must be a variable.".to_string(),
+                )));
+            }
+        }
+
+        if let Some(_) = stmt.superclass() {
+            self.begin_scope();
+            self.scopes.last_mut().unwrap().insert("super".to_string(), true);
+        }
+
         self.begin_scope();
         self.scopes.last_mut().unwrap().insert("this".to_string(), true);
 
@@ -214,6 +257,11 @@ impl<'a> stmt::Visitor<()> for Resolver<'a> {
         }
 
         self.end_scope();
+
+        if let Some(_) = stmt.superclass() {
+            self.end_scope();
+        }
+
         self.current_class = enclosing_class;
 
         Ok(())
@@ -262,7 +310,7 @@ impl<'a> stmt::Visitor<()> for Resolver<'a> {
                     "Cannot return a value from an initializer.".to_string(),
                 )));
             }
-            
+
             self.resolve_expr(value)?;
         }
         Ok(())

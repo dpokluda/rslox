@@ -1,4 +1,4 @@
-use crate::expr::{Expr, Binary, Grouping, Literal, Unary, Variable, Assign, Logical, Call, Get, Set, This};
+use crate::expr::{Expr, Binary, Grouping, Literal, Unary, Variable, Assign, Logical, Call, Get, Set, This, Super};
 use crate::{expr, stmt};
 use crate::lox_callable::LoxCallable;
 use crate::runtime_error::{LoxRuntime, RuntimeError, RuntimeReturn};
@@ -35,10 +35,6 @@ impl Interpreter {
             global,
             locals: HashMap::new(),
         }
-    }
-
-    pub fn globals(&self) -> Rc<RefCell<Environment>> {
-        Rc::clone(&self.global)
     }
 
     pub fn interpret(&mut self, statements: &Vec<Box<Stmt>>) {
@@ -298,6 +294,40 @@ impl expr::Visitor<Value> for Interpreter {
         }
     }
 
+    fn visit_super_expr(&mut self, expr: &Super) -> anyhow::Result<Value, LoxRuntime> {
+        let distance = self.locals.get(&expr::Expr::Super(expr.clone()))
+            .ok_or_else(|| LoxRuntime::Error(RuntimeError::new(
+                expr.keyword().clone(),
+                "Undefined super class.".to_string(),
+            )))?;
+
+        let superclass_value = self.environment.borrow().get_at(*distance, "super")?;
+        let superclass = match superclass_value {
+            Value::LoxClass(class) => class,
+            _ => return Err(LoxRuntime::Error(RuntimeError::new(
+                expr.keyword().clone(),
+                "Super is not a class.".to_string(),
+            ))),
+        };
+
+        let instance_value = self.environment.borrow().get_at(*distance - 1, "this")?;
+        let instance = match instance_value {
+            Value::LoxInstance(inst) => inst,
+            _ => return Err(LoxRuntime::Error(RuntimeError::new(
+                expr.keyword().clone(),
+                "This is not an instance.".to_string(),
+            ))),
+        };
+
+        let method = superclass.find_method(expr.method().lexeme())
+            .ok_or_else(|| LoxRuntime::Error(RuntimeError::new(
+                expr.method().clone(),
+                format!("Undefined property '{}'.", expr.method().lexeme()),
+            )))?;
+
+        Ok(Value::LoxCallable(Rc::new(method.bind(instance))))
+    }
+
     fn visit_this_expr(&mut self, expr: &This) -> anyhow::Result<Value, LoxRuntime> {
         self.lookup_variable(expr.keyword(), &expr::Expr::This(expr.clone()))
     }
@@ -332,7 +362,29 @@ impl stmt::Visitor<()> for Interpreter {
     }
 
     fn visit_class_stmt(&mut self, stmt: &Class) -> anyhow::Result<(), LoxRuntime> {
+        let mut superclass_value = Value::Nil;
+        let mut superclass: Option<Rc<LoxClass>> = None;
+        if let Some(superclass_expr) = stmt.superclass() {
+            superclass_value = self.evaluate(superclass_expr)?;
+            if let Value::LoxClass(class) = superclass_value.clone() {
+                superclass = Some(class.clone());
+            } else {
+                return Err(LoxRuntime::Error(RuntimeError::new(
+                    stmt.name().clone(),
+                    "Superclass must be a class.".to_string(),
+                )));
+            }
+        }
+
         self.environment.borrow_mut().define(stmt.name().lexeme().to_string(), Value::Nil);
+
+        if let Some(superclass_expr) = stmt.superclass() {
+            if let Expr::Variable(_) = superclass_expr.as_ref() {
+                self.environment = Rc::new(RefCell::new(Environment::from_enclosing(self.environment.clone())));
+                self.environment.borrow_mut().define("super".to_string(), superclass_value.clone());
+            }
+        }
+
         let mut methods = HashMap::new();
         for method in stmt.methods() {
             let function = LoxFunction::new(
@@ -343,7 +395,7 @@ impl stmt::Visitor<()> for Interpreter {
             methods.insert(method.name().lexeme().to_string(), function);
         }
 
-        let class_ = LoxClass::new(stmt.name().lexeme().to_string(), methods);
+        let class_ = LoxClass::new(stmt.name().lexeme().to_string(), superclass, methods);
         self.environment.borrow_mut().assign(stmt.name(), Value::LoxClass(Rc::new(class_)))?;
         Ok(())
     }

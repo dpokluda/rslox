@@ -20,10 +20,6 @@ impl LoxInstance {
         }
     }
 
-    pub fn class_(&self) -> &Rc<LoxClass> {
-        &self.class_
-    }
-
     pub fn get(&self, name: &Token) -> Result<Value, LoxRuntime> {
         if let Some(value) = self.fields.get(name.lexeme()) {
             Ok(value.clone())

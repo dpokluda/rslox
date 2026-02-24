@@ -6,19 +6,20 @@ use crate::lox_callable::LoxCallable;
 use crate::lox_function::LoxFunction;
 use crate::lox_instance::LoxInstance;
 use crate::runtime_error::LoxRuntime;
-use crate::token::Token;
 use crate::value::Value;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct LoxClass {
     name: String,
+    superclass: Option<Rc<LoxClass>>,
     methods: HashMap<String, LoxFunction>,
 }
 
 impl LoxClass {
-    pub fn new(name: String, methods: HashMap<String, LoxFunction>) -> Self {
+    pub fn new(name: String, superclass: Option<Rc<LoxClass>>, methods: HashMap<String, LoxFunction>) -> Self {
         LoxClass {
             name,
+            superclass,
             methods,
         }
     }
@@ -30,6 +31,8 @@ impl LoxClass {
     pub fn find_method(&self, name: &str) -> Option<LoxFunction> {
         if let Some(method) = self.methods.get(name) {
             Some(method.clone())
+        } else if let Some(superclass) = &self.superclass {
+            superclass.find_method(name)
         } else {
             None
         }

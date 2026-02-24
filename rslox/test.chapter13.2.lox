@@ -8,7 +8,8 @@ class BostonCream < Doughnut {
     cook() {
         super.cook();
         print "Fill with custard and coat with chocolate.";
-    }
+    } 
 }
 
 BostonCream().cook();
+        
